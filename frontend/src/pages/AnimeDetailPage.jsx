@@ -65,6 +65,11 @@ export const AnimeDetailPage = () => {
 
   // Fetch full details
   const fetchAnimeData = useCallback(async () => {
+    if (!id || id === 'undefined' || id === 'null') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [animeRes, statsRes, reviewsRes, relationsRes] = await Promise.allSettled([

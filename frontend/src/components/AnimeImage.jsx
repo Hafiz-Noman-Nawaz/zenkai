@@ -51,7 +51,6 @@ export const AnimeImage = ({
         decoding="async"
         fetchpriority={priority ? 'high' : 'auto'}
         referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
         onLoad={handleLoad}
         onError={() => setHasError(true)}
         className={`w-full h-full object-cover transition-opacity duration-200 ${

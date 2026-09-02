@@ -31,13 +31,19 @@ export const ComparePage = () => {
     const fetchPair = async () => {
       setLoading(true);
       try {
-        if (animeIdA) {
+        const validIdA = animeIdA && animeIdA !== 'undefined' && animeIdA !== 'null';
+        const validIdB = animeIdB && animeIdB !== 'undefined' && animeIdB !== 'null';
+
+        if (validIdA) {
           const resA = await animeApi.getAnimeById(animeIdA);
           if (resA.success && resA.data?.anime) setAnimeA(resA.data.anime);
         }
-        if (animeIdB) {
+        if (validIdB) {
           const resB = await animeApi.getAnimeById(animeIdB);
           if (resB.success && resB.data?.anime) setAnimeB(resB.data.anime);
+        }
+        if (!validIdA && !validIdB) {
+          await searchDefaultPair();
         }
       } catch (e) {
         console.error('Failed to load comparison pair:', e);
@@ -46,12 +52,7 @@ export const ComparePage = () => {
       }
     };
 
-    if (animeIdA || animeIdB) {
-      fetchPair();
-    } else {
-      // Default initial pair if none in query params
-      searchDefaultPair();
-    }
+    fetchPair();
   }, [animeIdA, animeIdB]);
 
   const searchDefaultPair = async () => {

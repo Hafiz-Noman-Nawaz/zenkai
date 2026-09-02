@@ -358,6 +358,10 @@ class AnimeService {
   }
 
   async getAnimeById(id) {
+    if (!id || id === 'undefined' || id === 'null') {
+      throw ApiError.notFound('Anime ID is required');
+    }
+
     const cacheKey = `anime_detail_${id}`;
     const cached = cache.get(cacheKey);
     if (cached) return cached;
@@ -407,6 +411,10 @@ class AnimeService {
   }
 
   async getAnimeGenres(animeId) {
+    if (!animeId || animeId === 'undefined' || animeId === 'null') {
+      throw ApiError.notFound('Anime ID is required');
+    }
+
     const anime = await prisma.anime.findUnique({
       where: { id: animeId },
       include: {
@@ -419,35 +427,34 @@ class AnimeService {
     });
 
     if (!anime) {
-      throw ApiError.notFound('Anime not found');
+      throw ApiError.notFound(`Anime with id '${animeId}' not found`);
     }
 
-    return anime.genres.map((g) => g.genre);
+    return anime.genres.map((g) => (g.genre ? g.genre : g));
   }
 
   async getAnimeStats(animeId) {
+    if (!animeId || animeId === 'undefined' || animeId === 'null') {
+      throw ApiError.notFound('Anime ID is required');
+    }
+
     const anime = await prisma.anime.findUnique({
       where: { id: animeId },
-      select: { id: true, title: true, score: true },
     });
 
     if (!anime) {
-      throw ApiError.notFound('Anime not found');
+      throw ApiError.notFound(`Anime with id '${animeId}' not found`);
     }
 
-    const [statusDistribution, ratingAggregate, favoriteCount] = await Promise.all([
-      prisma.userAnime.groupBy({
-        by: ['status'],
+    const [userAnimeEntries, ratingAggregate] = await Promise.all([
+      prisma.userAnime.findMany({
         where: { animeId },
-        _count: { status: true },
+        select: { status: true, isFavorite: true },
       }),
       prisma.userAnime.aggregate({
         where: { animeId, score: { not: null } },
         _avg: { score: true },
         _count: { score: true },
-      }),
-      prisma.userAnime.count({
-        where: { animeId, isFavorite: true },
       }),
     ]);
 
@@ -459,14 +466,17 @@ class AnimeService {
       DROPPED: 0,
     };
 
-    let totalTracked = 0;
-    statusDistribution.forEach((item) => {
-      statusCounts[item.status] = item._count.status;
-      totalTracked += item._count.status;
+    let favoriteCount = 0;
+    userAnimeEntries.forEach((entry) => {
+      if (statusCounts[entry.status] !== undefined) {
+        statusCounts[entry.status] += 1;
+      }
+      if (entry.isFavorite) favoriteCount += 1;
     });
 
+    const totalTracked = userAnimeEntries.length;
+
     return {
-      animeId,
       totalTracked,
       favoriteCount,
       globalScore: anime.score,
@@ -479,6 +489,10 @@ class AnimeService {
   }
 
   async getFranchiseRelations(id) {
+    if (!id || id === 'undefined' || id === 'null') {
+      throw ApiError.notFound('Anime ID is required');
+    }
+
     const anime = await prisma.anime.findUnique({
       where: { id },
       include: {
@@ -487,7 +501,7 @@ class AnimeService {
     });
 
     if (!anime) {
-      throw new ApiError('Anime not found', 404);
+      throw ApiError.notFound(`Anime with id '${id}' not found`);
     }
 
     // Extract root keyword from title to find genuine franchise siblings
