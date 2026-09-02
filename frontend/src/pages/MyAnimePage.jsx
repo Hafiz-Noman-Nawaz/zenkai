@@ -60,19 +60,19 @@ export const MyAnimePage = () => {
     try {
       let response;
       if (isFavoritesOnly) {
-        response = await userAnimeApi.getFavorites({ limit: 100 });
+        response = await userAnimeApi.getFavorites({ limit: 1000 });
       } else if (activeStatus === 'WATCHING') {
-        response = await userAnimeApi.getWatching({ limit: 100 });
+        response = await userAnimeApi.getWatching({ limit: 1000 });
       } else if (activeStatus === 'COMPLETED') {
-        response = await userAnimeApi.getCompleted({ limit: 100 });
+        response = await userAnimeApi.getCompleted({ limit: 1000 });
       } else if (activeStatus === 'PLAN_TO_WATCH') {
-        response = await userAnimeApi.getPlanToWatch({ limit: 100 });
+        response = await userAnimeApi.getPlanToWatch({ limit: 1000 });
       } else if (activeStatus === 'ON_HOLD') {
-        response = await userAnimeApi.getOnHold({ limit: 100 });
+        response = await userAnimeApi.getOnHold({ limit: 1000 });
       } else if (activeStatus === 'DROPPED') {
-        response = await userAnimeApi.getDropped({ limit: 100 });
+        response = await userAnimeApi.getDropped({ limit: 1000 });
       } else {
-        response = await userAnimeApi.getMyList({ limit: 100 });
+        response = await userAnimeApi.getMyList({ limit: 1000 });
       }
 
       if (response.success && response.data?.list) {

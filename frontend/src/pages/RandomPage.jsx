@@ -77,7 +77,7 @@ export const RandomPage = () => {
       let pool = [];
 
       if (sourcePool === 'plan_to_watch' && isAuthenticated) {
-        const res = await userAnimeApi.getPlanToWatch({ limit: 100 });
+        const res = await userAnimeApi.getPlanToWatch({ limit: 1000 });
         pool = (res.data?.list || []).map((e) => e.anime).filter(Boolean);
       } else {
         // Fetch matching page from catalog

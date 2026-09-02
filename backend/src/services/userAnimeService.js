@@ -8,12 +8,14 @@ class UserAnimeService {
     status,
     isFavorite,
     page = PAGINATION_DEFAULTS.PAGE,
-    limit = PAGINATION_DEFAULTS.LIMIT,
+    limit = PAGINATION_DEFAULTS.USER_LIBRARY_LIMIT,
     sortBy = 'updatedAt',
     sortOrder = 'desc',
     search,
   } = {}) {
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = limit ? Math.min(2500, parseInt(limit, 10)) : PAGINATION_DEFAULTS.USER_LIBRARY_LIMIT;
+    const skip = (pageNum - 1) * limitNum;
     const where = { userId };
 
     if (status) {
@@ -63,7 +65,7 @@ class UserAnimeService {
       prisma.userAnime.findMany({
         where,
         skip,
-        take: limit,
+        take: limitNum,
         orderBy,
         include: {
           anime: {
@@ -112,11 +114,11 @@ class UserAnimeService {
       entries: formatted,
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
-        hasNextPage: page * limit < total,
-        hasPrevPage: page > 1,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum) || 1,
+        hasNextPage: pageNum * limitNum < total,
+        hasPrevPage: pageNum > 1,
       },
     };
   }

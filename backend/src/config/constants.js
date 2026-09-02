@@ -17,8 +17,9 @@ const RATING_CONFIG = Object.freeze({
 
 const PAGINATION_DEFAULTS = Object.freeze({
   PAGE: 1,
-  LIMIT: 20,
-  MAX_LIMIT: 100,
+  LIMIT: 50,
+  MAX_LIMIT: 2500,
+  USER_LIBRARY_LIMIT: 1500,
 });
 
 const SORT_OPTIONS = Object.freeze({

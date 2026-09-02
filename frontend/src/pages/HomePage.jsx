@@ -35,7 +35,7 @@ export const HomePage = () => {
     }
 
     try {
-      const response = await userAnimeApi.getMyList({ limit: 100 });
+      const response = await userAnimeApi.getMyList({ limit: 1000 });
       if (response.success && response.data?.list) {
         const map = {};
         const watching = [];
