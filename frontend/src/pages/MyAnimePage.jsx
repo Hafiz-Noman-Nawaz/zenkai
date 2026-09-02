@@ -49,13 +49,13 @@ export const MyAnimePage = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isBatchAddOpen, setIsBatchAddOpen] = useState(false);
 
-  const fetchList = useCallback(async () => {
+  const fetchList = useCallback(async (silent = false) => {
     if (!isAuthenticated) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       let response;
       if (isFavoritesOnly) {
@@ -80,13 +80,49 @@ export const MyAnimePage = () => {
     } catch (err) {
       console.error('Failed to fetch library:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [isAuthenticated, activeStatus, isFavoritesOnly]);
 
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  // Real-time optimistic update when anime is added via Rapid Batch Add
+  const handleBatchItemUpdated = (savedEntry) => {
+    if (!savedEntry) {
+      fetchList(true);
+      return;
+    }
+
+    setEntries((prev) => {
+      const existingIdx = prev.findIndex(
+        (e) => (e.anime?.id && e.anime?.id === savedEntry.anime?.id) || (e.animeId && e.animeId === savedEntry.animeId)
+      );
+
+      const matchesFilter =
+        !activeStatus ||
+        activeStatus === savedEntry.status ||
+        (isFavoritesOnly && savedEntry.isFavorite);
+
+      if (existingIdx >= 0) {
+        if (!matchesFilter && activeStatus) {
+          return prev.filter((_, idx) => idx !== existingIdx);
+        }
+        const updated = [...prev];
+        updated[existingIdx] = { ...updated[existingIdx], ...savedEntry };
+        return updated;
+      } else {
+        if (matchesFilter) {
+          return [savedEntry, ...prev];
+        }
+        return prev;
+      }
+    });
+
+    // Refresh data silently in background
+    fetchList(true);
+  };
 
   // Quick inline episode progress +1 increment
   const handleQuickProgress = async (entry, increment = 1) => {
@@ -567,8 +603,11 @@ export const MyAnimePage = () => {
       {/* Rapid Batch Add Modal */}
       <BatchAddModal
         isOpen={isBatchAddOpen}
-        onClose={() => setIsBatchAddOpen(false)}
-        onUpdated={fetchList}
+        onClose={() => {
+          setIsBatchAddOpen(false);
+          fetchList(true);
+        }}
+        onUpdated={handleBatchItemUpdated}
       />
     </div>
   );

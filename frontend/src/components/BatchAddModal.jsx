@@ -101,7 +101,21 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
         }));
         setSessionCount((prev) => prev + 1);
         toast.success(`Added "${anime.title}" as ${status}`);
-        if (onUpdated) onUpdated();
+
+        const savedEntry = res.data?.entry || {
+          id: `entry-${targetId}-${Date.now()}`,
+          animeId: targetId,
+          status,
+          progress,
+          score,
+          isFavorite: false,
+          anime: anime,
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (onUpdated) {
+          onUpdated(savedEntry);
+        }
       }
     } catch (err) {
       toast.error(err.message || 'Failed to add anime');
