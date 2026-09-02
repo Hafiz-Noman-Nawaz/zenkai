@@ -177,7 +177,8 @@ export const SchedulePage = () => {
           {filteredShows.map((item) => {
             const anime = item.anime;
             if (!anime) return null;
-            const userEntry = userEntriesMap[anime.id];
+            const animeId = anime.id || anime.externalId;
+            const userEntry = userEntriesMap[animeId] || userEntriesMap[anime.id];
             const timeUntil = formatTimeUntil(item.airingAt);
             const localAirTime = new Date(item.airingAt * 1000).toLocaleTimeString([], {
               hour: '2-digit',
@@ -186,12 +187,12 @@ export const SchedulePage = () => {
 
             return (
               <div
-                key={item.scheduleId}
+                key={item.scheduleId || `${animeId}-${item.episode}`}
                 className="group relative flex gap-4 p-3.5 rounded-2xl bg-zenkai-surface/60 hover:bg-zenkai-elevated/90 border border-zenkai-border/80 hover:border-indigo-500/40 transition-all duration-300 shadow-zenkai-subtle"
               >
                 {/* Poster Artwork */}
                 <Link
-                  to={`/anime/${anime.id}`}
+                  to={`/anime/${animeId}`}
                   className="shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden bg-zenkai-card relative shadow-md group-hover:scale-105 transition-transform duration-300"
                 >
                   <AnimeImage
@@ -224,7 +225,7 @@ export const SchedulePage = () => {
                     </div>
 
                     <Link
-                      to={`/anime/${anime.id}`}
+                      to={`/anime/${animeId}`}
                       className="font-bold text-xs sm:text-sm text-white hover:text-indigo-300 transition-colors line-clamp-2 block"
                     >
                       {anime.title}

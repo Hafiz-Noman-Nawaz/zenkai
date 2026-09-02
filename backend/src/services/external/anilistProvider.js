@@ -46,6 +46,7 @@ class AniListProvider extends AnimeDataProvider {
     const studio = item.studios?.nodes?.[0]?.name || null;
 
     return {
+      id: item.id ? String(item.id) : undefined,
       externalId: item.id,
       title: item.title?.romaji || item.title?.english || 'Untitled Anime',
       englishTitle: item.title?.english || null,

@@ -235,6 +235,53 @@ class AnimeService {
 
     try {
       const schedule = await this.externalProvider.getWeeklySchedule();
+
+      // Collect all external anime in schedule and ensure they have valid DB IDs
+      const externalAnimes = [];
+      Object.values(schedule).forEach((dayList) => {
+        if (Array.isArray(dayList)) {
+          dayList.forEach((item) => {
+            if (item.anime && item.anime.externalId) {
+              externalAnimes.push(item.anime);
+            }
+          });
+        }
+      });
+
+      if (externalAnimes.length > 0) {
+        const externalIds = externalAnimes.map((a) => a.externalId);
+        const existingDbAnimes = await prisma.anime.findMany({
+          where: { externalId: { in: externalIds } },
+          select: { id: true, externalId: true },
+        });
+
+        const idMap = new Map();
+        existingDbAnimes.forEach((dbA) => idMap.set(dbA.externalId, dbA.id));
+
+        // For missing anime, upsert in background so they are persisted in DB
+        const missing = externalAnimes.filter((a) => !idMap.has(a.externalId));
+        if (missing.length > 0) {
+          const upsertPromises = missing.slice(0, 15).map(async (m) => {
+            try {
+              const saved = await this.upsertFromExternalData(m);
+              if (saved) idMap.set(m.externalId, saved.id);
+            } catch (e) {}
+          });
+          await Promise.allSettled(upsertPromises);
+        }
+
+        // Assign DB IDs to all schedule anime
+        Object.values(schedule).forEach((dayList) => {
+          if (Array.isArray(dayList)) {
+            dayList.forEach((item) => {
+              if (item.anime) {
+                item.anime.id = idMap.get(item.anime.externalId) || String(item.anime.externalId);
+              }
+            });
+          }
+        });
+      }
+
       cache.set('weekly_schedule', schedule, 300000); // 5 minutes cache
       return schedule;
     } catch (err) {

@@ -26,16 +26,19 @@ export const NotificationBell = () => {
           const today = days[new Date().getDay()];
           const todayShows = res.data.schedule[today] || [];
 
-          const alerts = todayShows.slice(0, 6).map((item, idx) => ({
-            id: `alert-${item.anime?.id || idx}`,
-            animeId: item.anime?.id,
-            title: item.anime?.title,
-            coverImage: item.anime?.coverImage,
-            episode: item.episodeNumber || 'New',
-            airingTime: item.airingTime || 'Today',
-            read: false,
-            timeAgo: 'Broadcasting Today',
-          }));
+          const alerts = todayShows.slice(0, 6).map((item, idx) => {
+            const showId = item.anime?.id || item.anime?.externalId;
+            return {
+              id: `alert-${showId || idx}`,
+              animeId: showId,
+              title: item.anime?.title,
+              coverImage: item.anime?.coverImage,
+              episode: item.episodeNumber || 'New',
+              airingTime: item.airingTime || 'Today',
+              read: false,
+              timeAgo: 'Broadcasting Today',
+            };
+          });
 
           setNotifications(alerts);
           setUnreadCount(alerts.length);
