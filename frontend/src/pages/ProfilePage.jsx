@@ -66,6 +66,7 @@ export const ProfilePage = () => {
 
   // Pinboard selection modal
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [pinEditingSlot, setPinEditingSlot] = useState(0);
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
   const [allLibraryAnimes, setAllLibraryAnimes] = useState([]);
   const [userEntries, setUserEntries] = useState([]);
@@ -123,7 +124,10 @@ export const ProfilePage = () => {
         setAllLibraryAnimes(allAnimes);
 
         // Check custom pinned top 4 from localStorage
-        const savedPinsRaw = localStorage.getItem(`zenkai_pins_${targetUsername}`);
+        const savedPinsRaw =
+          localStorage.getItem(`zenkai_pins_${targetUsername}`) ||
+          localStorage.getItem('zenkai_pins_global');
+
         if (savedPinsRaw) {
           try {
             const parsed = JSON.parse(savedPinsRaw);
@@ -182,7 +186,25 @@ export const ProfilePage = () => {
     setTop4List(newPins);
     try {
       localStorage.setItem(`zenkai_pins_${targetUsername}`, JSON.stringify(newPins));
+      localStorage.setItem('zenkai_pins_global', JSON.stringify(newPins));
     } catch (e) {}
+  };
+
+  const handleQuickRemovePin = (slotIdx, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const updated = top4List.filter((_, idx) => idx !== slotIdx);
+    handleSavePins(updated);
+    toast.info(`Removed Pin #${slotIdx + 1}`);
+  };
+
+  const handleOpenCurateSlot = (slotIdx, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setPinEditingSlot(slotIdx);
+    setIsPinModalOpen(true);
   };
 
   if (loading) {
@@ -367,30 +389,69 @@ export const ProfilePage = () => {
             const anime = top4List[slotIdx];
             if (anime) {
               return (
-                <Link
+                <div
                   key={anime.id}
-                  to={`/anime/${anime.id}`}
                   className="group relative aspect-[2/3] rounded-2xl overflow-hidden bg-zenkai-card border-2 border-amber-500/30 hover:border-amber-400 shadow-xl transition-all duration-300 hover:scale-[1.02]"
                 >
-                  <AnimeImage
-                    src={anime.coverImage}
-                    alt={anime.title}
-                    aspectRatio="aspect-[2/3]"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {/* Gold Pin Badge */}
-                  <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black text-[11px] flex items-center justify-center shadow-lg shadow-amber-500/30">
-                    #{slotIdx + 1}
-                  </div>
-                  {anime.score && (
-                    <div className="absolute top-2 right-2 z-10">
+                  <Link to={`/anime/${anime.id}`} className="block w-full h-full">
+                    <AnimeImage
+                      src={anime.coverImage}
+                      alt={anime.title}
+                      aspectRatio="aspect-[2/3]"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </Link>
+
+                  {/* Gold Pin Badge (Click to Change) */}
+                  <button
+                    type="button"
+                    onClick={(e) => isOwnProfile && handleOpenCurateSlot(slotIdx, e)}
+                    className="absolute top-2 left-2 z-20 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-[11px] flex items-center gap-1 shadow-lg shadow-amber-500/30 cursor-pointer transition-transform active:scale-95"
+                    title={isOwnProfile ? "Click to change this pin" : `Pin #${slotIdx + 1}`}
+                  >
+                    <span>#{slotIdx + 1}</span>
+                    {isOwnProfile && <Edit3 className="w-2.5 h-2.5 opacity-70" />}
+                  </button>
+
+                  {/* Score & Quick Actions */}
+                  <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
+                    {anime.score && (
                       <RatingBadge score={anime.score} size="sm" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                    <span className="font-bold text-xs text-white line-clamp-2">{anime.title}</span>
+                    )}
+                    {isOwnProfile && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleQuickRemovePin(slotIdx, e)}
+                        className="p-1 rounded-lg bg-black/80 hover:bg-rose-600 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md"
+                        title="Remove from Top 4"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                </Link>
+
+                  {/* Hover Overlay with Change / View Options */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 z-10 pointer-events-none">
+                    <span className="font-bold text-xs text-white line-clamp-2">{anime.title}</span>
+                    {isOwnProfile && (
+                      <div className="pt-2 flex items-center gap-2 pointer-events-auto">
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenCurateSlot(slotIdx, e)}
+                          className="flex-1 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-[10px] shadow-sm transition-colors cursor-pointer text-center"
+                        >
+                          Change Pin
+                        </button>
+                        <Link
+                          to={`/anime/${anime.id}`}
+                          className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-semibold text-[10px] transition-colors text-center"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             }
 
@@ -399,11 +460,11 @@ export const ProfilePage = () => {
                 key={slotIdx}
                 type="button"
                 onClick={() => {
-                  if (isOwnProfile) setIsPinModalOpen(true);
+                  if (isOwnProfile) handleOpenCurateSlot(slotIdx);
                 }}
                 className={`aspect-[2/3] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 text-center transition-all ${
                   isOwnProfile
-                    ? 'bg-zenkai-surface/40 hover:bg-amber-500/10 border-amber-500/30 hover:border-amber-400 text-zenkai-muted hover:text-amber-300 cursor-pointer group'
+                    ? 'bg-zenkai-surface/40 hover:bg-amber-500/10 border-amber-500/30 hover:border-amber-400 text-zenkai-muted hover:text-amber-300 cursor-pointer group shadow-sm'
                     : 'bg-zenkai-surface/20 border-zenkai-border text-zenkai-dim cursor-default'
                 }`}
               >
@@ -415,7 +476,7 @@ export const ProfilePage = () => {
                 </span>
                 {isOwnProfile && (
                   <span className="text-[10px] text-amber-400/80 mt-1 font-semibold">
-                    + Pin Anime
+                    + Click to Pin
                   </span>
                 )}
               </button>
@@ -788,6 +849,7 @@ export const ProfilePage = () => {
         initialPins={top4List}
         libraryAnimes={allLibraryAnimes}
         onSavePins={handleSavePins}
+        initialSlot={pinEditingSlot}
       />
 
       {/* Otaku Wrapped Modal */}
