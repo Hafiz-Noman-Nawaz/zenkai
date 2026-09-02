@@ -19,6 +19,7 @@ import {
   Loader2,
   FolderOpen,
   Upload,
+  Zap,
 } from 'lucide-react';
 import { userAnimeApi } from '../api/userAnime';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ import { useToast } from '../context/ToastContext';
 import { AnimeCard } from '../components/AnimeCard';
 import { TrackModal } from '../components/TrackModal';
 import { ImportModal } from '../components/ImportModal';
+import { BatchAddModal } from '../components/BatchAddModal';
 import { RatingBadge } from '../components/RatingStars';
 import { EmptyState } from '../components/EmptyState';
 import { AnimeImage } from '../components/AnimeImage';
@@ -45,6 +47,7 @@ export const MyAnimePage = () => {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
   const [selectedEntryForModal, setSelectedEntryForModal] = useState(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isBatchAddOpen, setIsBatchAddOpen] = useState(false);
 
   const fetchList = useCallback(async () => {
     if (!isAuthenticated) {
@@ -88,6 +91,9 @@ export const MyAnimePage = () => {
   // Quick inline episode progress +1 increment
   const handleQuickProgress = async (entry, increment = 1) => {
     const anime = entry.anime;
+    const animeId = anime?.id || entry.animeId || anime?.externalId;
+    if (!animeId) return;
+
     const current = entry.progress || 0;
     const max = anime?.episodes || 9999;
     const nextVal = Math.min(max, Math.max(0, current + increment));
@@ -95,12 +101,12 @@ export const MyAnimePage = () => {
     if (nextVal === current) return;
 
     try {
-      const res = await userAnimeApi.updateProgress(anime.id, nextVal);
+      const res = await userAnimeApi.updateProgress(animeId, nextVal);
       if (res.success) {
         setEntries((prev) =>
           prev.map((item) => (item.id === entry.id ? { ...item, progress: nextVal } : item))
         );
-        toast.success(`Updated ${anime.title} to Ep ${nextVal}`);
+        toast.success(`Updated ${anime?.title || 'Anime'} to Ep ${nextVal}`);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to update progress');
@@ -110,15 +116,17 @@ export const MyAnimePage = () => {
   // Quick favorite toggle
   const handleToggleFavorite = async (entry) => {
     const anime = entry.anime;
+    const animeId = anime?.id || entry.animeId || anime?.externalId;
+    if (!animeId) return;
     const newFav = !entry.isFavorite;
 
     try {
-      const res = await userAnimeApi.toggleFavorite(anime.id, newFav);
+      const res = await userAnimeApi.toggleFavorite(animeId, newFav);
       if (res.success) {
         setEntries((prev) =>
           prev.map((item) => (item.id === entry.id ? { ...item, isFavorite: newFav } : item))
         );
-        toast.info(newFav ? `Added "${anime.title}" to favorites` : `Removed from favorites`);
+        toast.info(newFav ? `Added "${anime?.title || 'Anime'}" to favorites` : `Removed from favorites`);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to toggle favorite');
@@ -128,13 +136,15 @@ export const MyAnimePage = () => {
   // Quick remove
   const handleRemove = async (entry) => {
     const anime = entry.anime;
-    if (!window.confirm(`Remove "${anime.title}" from your library?`)) return;
+    const animeId = anime?.id || entry.animeId || anime?.externalId;
+    if (!animeId) return;
+    if (!window.confirm(`Remove "${anime?.title || 'Anime'}" from your library?`)) return;
 
     try {
-      const res = await userAnimeApi.removeEntry(anime.id);
+      const res = await userAnimeApi.removeEntry(animeId);
       if (res.success) {
         setEntries((prev) => prev.filter((item) => item.id !== entry.id));
-        toast.info(`Removed "${anime.title}" from your library`);
+        toast.info(`Removed "${anime?.title || 'Anime'}" from your library`);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to remove anime');
@@ -234,10 +244,18 @@ export const MyAnimePage = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
+            <button
+              onClick={() => setIsBatchAddOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/25 btn-press cursor-pointer"
+            >
+              <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+              <span>⚡ Rapid Batch Add (140+ Shows)</span>
+            </button>
+
             <button
               onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zenkai-surface hover:bg-zenkai-elevated border border-zenkai-border text-zenkai-text hover:text-white text-xs font-semibold transition-all shadow-sm"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zenkai-surface hover:bg-zenkai-elevated border border-zenkai-border text-zenkai-text hover:text-white text-xs font-semibold transition-all shadow-sm cursor-pointer"
             >
               <Upload className="w-4 h-4 text-indigo-400" />
               <span>Import MAL / AniList</span>
@@ -245,10 +263,10 @@ export const MyAnimePage = () => {
 
             <Link
               to="/explore"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zenkai-surface hover:bg-zenkai-elevated border border-zenkai-border text-white text-xs font-semibold shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Anime</span>
+              <span>Explore</span>
             </Link>
           </div>
         </div>
@@ -544,6 +562,13 @@ export const MyAnimePage = () => {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImportCompleted={fetchList}
+      />
+
+      {/* Rapid Batch Add Modal */}
+      <BatchAddModal
+        isOpen={isBatchAddOpen}
+        onClose={() => setIsBatchAddOpen(false)}
+        onUpdated={fetchList}
       />
     </div>
   );

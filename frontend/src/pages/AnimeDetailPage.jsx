@@ -165,21 +165,38 @@ export const AnimeDetailPage = () => {
 
   // Quick increment progress
   const handleQuickProgress = async (delta) => {
-    if (!userEntry) return;
-    const maxEp = anime.episodes || 9999;
-    const nextVal = Math.max(0, Math.min(maxEp, (userEntry.progress || 0) + delta));
+    const maxEp = anime?.episodes || 9999;
+    const currentVal = trackingProgress || 0;
+    const nextVal = Math.max(0, Math.min(maxEp, currentVal + delta));
 
-    try {
-      const res = await userAnimeApi.updateProgress(anime.id, nextVal);
-      if (res.success) {
-        setUserEntry(res.data.entry);
-        setTrackingProgress(nextVal);
-        if (nextVal === maxEp && userEntry.status !== 'COMPLETED') {
-          toast.success(`🎉 Completed all ${maxEp} episodes of "${anime.title}"!`);
+    setTrackingProgress(nextVal);
+
+    if (isAuthenticated && anime?.id) {
+      try {
+        const res = await userAnimeApi.upsertEntry(anime.id, {
+          status: nextVal === maxEp && anime.episodes ? 'COMPLETED' : (trackingStatus || 'WATCHING'),
+          progress: nextVal,
+          score: trackingScore,
+          isFavorite: trackingFavorite,
+          notes: trackingNotes,
+        });
+        if (res.success) {
+          setUserEntry(res.data.entry);
+          if (nextVal === maxEp && anime.episodes && trackingStatus !== 'COMPLETED') {
+            setTrackingStatus('COMPLETED');
+            toast.success(`🎉 Completed all ${maxEp} episodes of "${anime.title}"!`);
+          }
         }
+      } catch (err) {
+        toast.error('Failed to sync progress');
       }
-    } catch (err) {
-      toast.error('Failed to update progress');
+    }
+  };
+
+  const handleStatusChange = (newStatus) => {
+    setTrackingStatus(newStatus);
+    if (newStatus === 'COMPLETED' && anime?.episodes) {
+      setTrackingProgress(anime.episodes);
     }
   };
 
@@ -189,7 +206,7 @@ export const AnimeDetailPage = () => {
     if (!window.confirm(`Remove "${anime.title}" from your library?`)) return;
 
     try {
-      const res = await userAnimeApi.removeAnime(anime.id);
+      const res = await userAnimeApi.removeEntry(anime.id);
       if (res.success) {
         setUserEntry(null);
         setTrackingProgress(0);
@@ -321,7 +338,7 @@ export const AnimeDetailPage = () => {
               <label className="text-[11px] font-medium text-zenkai-muted">Watch Status</label>
               <select
                 value={trackingStatus}
-                onChange={(e) => setTrackingStatus(e.target.value)}
+                onChange={(e) => handleStatusChange(e.target.value)}
                 className="w-full bg-zenkai-card border border-zenkai-border rounded-xl px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
               >
                 <option value="WATCHING">Watching</option>
@@ -343,8 +360,8 @@ export const AnimeDetailPage = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleQuickProgress(-1)}
-                  disabled={!userEntry || trackingProgress <= 0}
-                  className="w-8 h-8 rounded-lg bg-zenkai-card hover:bg-zenkai-elevated border border-zenkai-border flex items-center justify-center text-white disabled:opacity-30"
+                  disabled={trackingProgress <= 0}
+                  className="w-8 h-8 rounded-lg bg-zenkai-card hover:bg-zenkai-elevated border border-zenkai-border flex items-center justify-center text-white disabled:opacity-30 transition-colors"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
@@ -358,8 +375,8 @@ export const AnimeDetailPage = () => {
                 />
                 <button
                   onClick={() => handleQuickProgress(1)}
-                  disabled={!userEntry || (anime.episodes && trackingProgress >= anime.episodes)}
-                  className="w-8 h-8 rounded-lg bg-zenkai-card hover:bg-zenkai-elevated border border-zenkai-border flex items-center justify-center text-white disabled:opacity-30"
+                  disabled={Boolean(anime.episodes && trackingProgress >= anime.episodes)}
+                  className="w-8 h-8 rounded-lg bg-zenkai-card hover:bg-zenkai-elevated border border-zenkai-border flex items-center justify-center text-white disabled:opacity-30 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
