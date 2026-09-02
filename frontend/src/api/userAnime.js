@@ -5,6 +5,10 @@ export const userAnimeApi = {
     return apiClient.get('/my-anime', { params });
   },
 
+  getUserLibrary: async (params = {}) => {
+    return apiClient.get('/my-anime', { params });
+  },
+
   getWatching: async (params = {}) => {
     return apiClient.get('/my-anime/watching', { params });
   },
@@ -33,8 +37,17 @@ export const userAnimeApi = {
     return apiClient.get(`/my-anime/${animeId}`);
   },
 
-  upsertEntry: async (animeId, data) => {
-    return apiClient.post('/my-anime', { animeId, ...data });
+  upsertEntry: async (animeId, data = {}) => {
+    const payload = typeof animeId === 'object' ? animeId : { animeId, ...data };
+    return apiClient.post('/my-anime', payload);
+  },
+
+  addOrUpdateAnime: async (data) => {
+    return apiClient.post('/my-anime', data);
+  },
+
+  addOrUpdate: async (data) => {
+    return apiClient.post('/my-anime', data);
   },
 
   updateProgress: async (animeId, progress) => {
