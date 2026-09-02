@@ -36,6 +36,7 @@ import { RatingBadge } from '../components/RatingStars';
 import { AnimeImage } from '../components/AnimeImage';
 import { WrappedModal } from '../components/WrappedModal';
 import { OtakuPassport } from '../components/OtakuPassport';
+import { PinModal } from '../components/PinModal';
 
 export const ProfilePage = () => {
   const { username } = useParams();
@@ -66,7 +67,14 @@ export const ProfilePage = () => {
   // Pinboard selection modal
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
-  const [allLibraryAnimes, setAllLibraryAnimes] = useState([]);
+  const buildDefaultTop4 = (entries, favs) => {
+    if (favs.length >= 4) return favs.slice(0, 4);
+    const sorted = [...entries]
+      .filter((e) => e.anime)
+      .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.isFavorite ? 1 : -1))
+      .map((e) => e.anime);
+    return sorted.slice(0, 4);
+  };
 
   const fetchProfileData = useCallback(async () => {
     if (!targetUsername) {
@@ -76,10 +84,13 @@ export const ProfilePage = () => {
 
     setLoading(true);
     try {
-      const [profRes, statsRes] = await Promise.allSettled([
+      const [profRes, statsRes, libraryRes] = await Promise.allSettled([
         usersApi.getProfile(targetUsername),
         statsApi.getUserStats(targetUsername),
+        isOwnProfile ? userAnimeApi.getUserLibrary({ limit: 1500 }) : Promise.resolve(null),
       ]);
+
+      let userEntries = [];
 
       if (profRes.status === 'fulfilled' && profRes.value?.data?.profile) {
         const prof = profRes.value.data.profile;
@@ -88,23 +99,39 @@ export const ProfilePage = () => {
         setEditBio(prof.bio || '');
         setEditAvatar(prof.avatar || '');
 
-        // Extract favorites & watching
-        if (prof.userAnimes) {
-          const favs = prof.userAnimes.filter((e) => e.isFavorite && e.anime).map((e) => e.anime);
-          const watch = prof.userAnimes.filter((e) => e.status === 'WATCHING' && e.anime).map((e) => e.anime);
-          const allAnimes = prof.userAnimes.map((e) => e.anime).filter(Boolean);
+        if (prof.userAnimes && prof.userAnimes.length > 0) {
+          userEntries = prof.userAnimes;
+        }
+      }
 
-          setFavorites(favs);
-          setWatching(watch);
-          setAllLibraryAnimes(allAnimes);
+      if (libraryRes.status === 'fulfilled' && libraryRes.value?.data?.list) {
+        userEntries = libraryRes.value.data.list;
+      }
 
-          // Build top 4: prioritize favorites, then highest rated
-          const sortedByScore = [...prof.userAnimes]
-            .filter((e) => e.anime)
-            .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.isFavorite ? 1 : -1))
-            .map((e) => e.anime);
+      if (userEntries.length > 0) {
+        const favs = userEntries.filter((e) => e.isFavorite && e.anime).map((e) => e.anime);
+        const watch = userEntries.filter((e) => e.status === 'WATCHING' && e.anime).map((e) => e.anime);
+        const allAnimes = userEntries.map((e) => e.anime).filter(Boolean);
 
-          setTop4List(favs.length >= 4 ? favs.slice(0, 4) : sortedByScore.slice(0, 4));
+        setFavorites(favs);
+        setWatching(watch);
+        setAllLibraryAnimes(allAnimes);
+
+        // Check custom pinned top 4 from localStorage
+        const savedPinsRaw = localStorage.getItem(`zenkai_pins_${targetUsername}`);
+        if (savedPinsRaw) {
+          try {
+            const parsed = JSON.parse(savedPinsRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setTop4List(parsed);
+            } else {
+              setTop4List(buildDefaultTop4(userEntries, favs));
+            }
+          } catch (e) {
+            setTop4List(buildDefaultTop4(userEntries, favs));
+          }
+        } else {
+          setTop4List(buildDefaultTop4(userEntries, favs));
         }
       }
 
@@ -116,7 +143,7 @@ export const ProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [targetUsername]);
+  }, [targetUsername, isOwnProfile]);
 
   useEffect(() => {
     fetchProfileData();
@@ -146,16 +173,11 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleSelectTop4 = (anime) => {
-    if (top4List.some((a) => a.id === anime.id)) {
-      setTop4List((prev) => prev.filter((a) => a.id !== anime.id));
-    } else {
-      if (top4List.length >= 4) {
-        toast.info('You can select up to 4 favorite anime');
-        return;
-      }
-      setTop4List((prev) => [...prev, anime]);
-    }
+  const handleSavePins = (newPins) => {
+    setTop4List(newPins);
+    try {
+      localStorage.setItem(`zenkai_pins_${targetUsername}`, JSON.stringify(newPins));
+    } catch (e) {}
   };
 
   if (loading) {
@@ -290,23 +312,26 @@ export const ProfilePage = () => {
               Pinnacle anime milestones curated by @{profile.username}
             </p>
           </div>
-          {isOwnProfile && allLibraryAnimes.length > 0 && (
+          {isOwnProfile && (
             <button
               onClick={() => setIsPinModalOpen(true)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all btn-press cursor-pointer"
             >
-              Curate Top 4
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Curate Top 4</span>
             </button>
           )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {top4List.length > 0
-            ? top4List.map((anime, idx) => (
+          {[0, 1, 2, 3].map((slotIdx) => {
+            const anime = top4List[slotIdx];
+            if (anime) {
+              return (
                 <Link
                   key={anime.id}
                   to={`/anime/${anime.id}`}
-                  className="group relative aspect-[2/3] rounded-2xl overflow-hidden bg-zenkai-card border-2 border-amber-500/30 hover:border-amber-400 shadow-xl transition-all duration-300 group-hover:scale-[1.02]"
+                  className="group relative aspect-[2/3] rounded-2xl overflow-hidden bg-zenkai-card border-2 border-amber-500/30 hover:border-amber-400 shadow-xl transition-all duration-300 hover:scale-[1.02]"
                 >
                   <AnimeImage
                     src={anime.coverImage}
@@ -316,7 +341,7 @@ export const ProfilePage = () => {
                   />
                   {/* Gold Pin Badge */}
                   <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black text-[11px] flex items-center justify-center shadow-lg shadow-amber-500/30">
-                    #{idx + 1}
+                    #{slotIdx + 1}
                   </div>
                   {anime.score && (
                     <div className="absolute top-2 right-2 z-10">
@@ -327,16 +352,36 @@ export const ProfilePage = () => {
                     <span className="font-bold text-xs text-white line-clamp-2">{anime.title}</span>
                   </div>
                 </Link>
-              ))
-            : Array.from({ length: 4 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="aspect-[2/3] rounded-2xl bg-zenkai-surface/40 border border-dashed border-zenkai-border flex flex-col items-center justify-center p-4 text-center text-zenkai-dim"
-                >
-                  <Pin className="w-6 h-6 opacity-30 mb-2 rotate-45" />
-                  <span className="text-xs font-mono">Pin #{idx + 1}</span>
+              );
+            }
+
+            return (
+              <button
+                key={slotIdx}
+                type="button"
+                onClick={() => {
+                  if (isOwnProfile) setIsPinModalOpen(true);
+                }}
+                className={`aspect-[2/3] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 text-center transition-all ${
+                  isOwnProfile
+                    ? 'bg-zenkai-surface/40 hover:bg-amber-500/10 border-amber-500/30 hover:border-amber-400 text-zenkai-muted hover:text-amber-300 cursor-pointer group'
+                    : 'bg-zenkai-surface/20 border-zenkai-border text-zenkai-dim cursor-default'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <Pin className="w-4 h-4 text-amber-400 rotate-45" />
                 </div>
-              ))}
+                <span className="text-xs font-mono font-bold text-white">
+                  Slot #{slotIdx + 1}
+                </span>
+                {isOwnProfile && (
+                  <span className="text-[10px] text-amber-400/80 mt-1 font-semibold">
+                    + Pin Anime
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -696,6 +741,15 @@ export const ProfilePage = () => {
           </div>
         </div>
       )}
+
+      {/* Pinboard Masterpiece Curation Modal */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        initialPins={top4List}
+        libraryAnimes={allLibraryAnimes}
+        onSavePins={handleSavePins}
+      />
 
       {/* Otaku Wrapped Modal */}
       <WrappedModal

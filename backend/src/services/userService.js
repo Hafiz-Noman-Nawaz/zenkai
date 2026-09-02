@@ -21,6 +21,21 @@ class UserService {
             reviews: true,
           },
         },
+        userAnimes: {
+          take: 1500,
+          orderBy: [{ isFavorite: 'desc' }, { score: 'desc' }, { updatedAt: 'desc' }],
+          include: {
+            anime: {
+              include: {
+                genres: {
+                  include: {
+                    genre: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -28,7 +43,7 @@ class UserService {
       throw ApiError.notFound(`User '@${username}' not found`);
     }
 
-    // Compute basic list distribution for public profile summary
+    // Compute comprehensive list distribution for public profile summary
     const statusCounts = await prisma.userAnime.groupBy({
       by: ['status'],
       where: { userId: user.id },
@@ -51,12 +66,29 @@ class UserService {
       where: { userId: user.id, isFavorite: true },
     });
 
+    const ratingAggregate = await prisma.userAnime.aggregate({
+      where: { userId: user.id, score: { not: null } },
+      _avg: { score: true },
+      _count: { score: true },
+    });
+
+    const epAggregate = await prisma.userAnime.aggregate({
+      where: { userId: user.id },
+      _sum: { progress: true },
+    });
+
+    const totalEps = epAggregate._sum.progress || 0;
+    const daysWatched = Number(((totalEps * 24) / 1440).toFixed(1));
+
     return {
       ...user,
       statsSummary: {
         totalAnime: user._count.userAnimes,
         reviewsCount: user._count.reviews,
         favoriteCount,
+        episodesWatched: totalEps,
+        daysWatched,
+        meanScore: ratingAggregate._avg.score ? Number(ratingAggregate._avg.score.toFixed(1)) : null,
         ...statusMap,
       },
     };
