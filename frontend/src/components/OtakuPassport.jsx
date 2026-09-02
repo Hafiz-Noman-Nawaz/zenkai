@@ -220,7 +220,7 @@ export const OtakuPassport = ({ user, stats, library = [], topFavorites = [] }) 
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="text-[11px] font-mono text-zenkai-muted">
-              Live Otaku Authentication Protocol v2.4
+              Verified Otaku Identity Protocol
             </span>
           </div>
 

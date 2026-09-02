@@ -24,19 +24,19 @@ import { soundFX } from '../utils/soundEffects';
 const VIBE_TAGS = [
   { id: 'plot-twist', label: 'Mind-Bending Plot Twists', genre: 'Mystery', scoreMin: 8.2 },
   { id: 'dark-gritty', label: 'Dark & Psychological', genre: 'Psychological', scoreMin: 8.0 },
-  { id: 'god-tier-anim', label: 'God-Tier Animation & Action', genre: 'Action', scoreMin: 8.3 },
-  { id: 'cry-heavy', label: 'Emotional Tearjerker', genre: 'Drama', scoreMin: 8.0 },
+  { id: 'god-tier-anim', label: 'High-Octane Action & Sakuga', genre: 'Action', scoreMin: 8.3 },
+  { id: 'cry-heavy', label: 'Deep Emotional Drama', genre: 'Drama', scoreMin: 8.0 },
   { id: 'cyberpunk', label: 'Cyberpunk & Sci-Fi Dystopia', genre: 'Sci-Fi', scoreMin: 7.8 },
-  { id: 'cozy-iyashikei', label: 'Cozy & Wholesome Healing', genre: 'Slice of Life', scoreMin: 7.6 },
+  { id: 'cozy-iyashikei', label: 'Cozy & Wholesome Slice of Life', genre: 'Slice of Life', scoreMin: 7.6 },
   { id: 'epic-hype', label: 'Zero-to-Hero Shounen Hype', genre: 'Adventure', scoreMin: 8.1 },
-  { id: 'romance-spark', label: 'Heartfelt Romance', genre: 'Romance', scoreMin: 7.9 },
+  { id: 'romance-spark', label: 'Heartfelt Romance & Drama', genre: 'Romance', scoreMin: 7.9 },
 ];
 
 export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const [selectedVibes, setSelectedVibes] = useState(['god-tier-anim']);
-  const [maxEpisodes, setMaxEpisodes] = useState(26); // 12, 26, 50, 100+
+  const [maxEpisodes, setMaxEpisodes] = useState(26);
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState([]);
   const [hasRun, setHasRun] = useState(false);
@@ -48,13 +48,12 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
     );
   };
 
-  const handleDivinate = async () => {
+  const handleDiscover = async () => {
     soundFX.playEpisodeChime();
     setAnalyzing(true);
     setHasRun(true);
 
     try {
-      // Collect primary genres from selected vibes
       const selectedObj = VIBE_TAGS.filter((v) => selectedVibes.includes(v.id));
       const targetGenre = selectedObj[0]?.genre || 'Action';
 
@@ -74,30 +73,28 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
 
       if (filtered.length === 0) filtered = list;
 
-      // Attach dynamic Synergy match calculation & Oracle Oracle reasons
       const scoredResults = filtered.slice(0, 3).map((a, idx) => {
         const synergy = Math.min(99, Math.max(88, Math.round(92 + (a.score ? a.score * 0.7 : 4) - idx * 2)));
         const tagNames = selectedObj.map((o) => o.label).join(' + ');
 
-        let oracleReason = `Selected for its supreme synergy with your desire for ${tagNames}.`;
+        let curatorNote = `Curated for high resonance with ${tagNames}.`;
         if (a.score && a.score >= 8.5) {
-          oracleReason = `Universal Masterpiece: Ranked in the top echelon with a community score of ${a.score.toFixed(1)}/10.`;
+          curatorNote = `Universal Masterpiece: Ranked in the top echelon with a community score of ${a.score.toFixed(1)}/10.`;
         }
 
         return {
           ...a,
           synergy,
-          oracleReason,
+          curatorNote,
         };
       });
 
-      // Synthetic suspense delay for luxury vibe
       setTimeout(() => {
         setResults(scoredResults);
         setAnalyzing(false);
-      }, 700);
+      }, 400);
     } catch (err) {
-      console.error('Oracle calculation failed:', err);
+      console.error('Vibe discovery failed:', err);
       setAnalyzing(false);
     }
   };
@@ -105,7 +102,7 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-2xl animate-fade-in">
       <div
-        className="w-full max-w-2xl bg-gradient-to-br from-zenkai-card via-zenkai-surface to-zenkai-elevated border border-purple-500/40 rounded-3xl shadow-2xl p-6 sm:p-8 flex flex-col max-h-[90vh] overflow-y-auto hide-scrollbar relative animate-scale-in"
+        className="w-full max-w-2xl bg-gradient-to-br from-zenkai-card via-zenkai-surface to-zenkai-elevated border border-purple-500/40 rounded-3xl shadow-2xl p-5 sm:p-8 flex flex-col max-h-[90vh] overflow-y-auto hide-scrollbar relative animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Glow Flares */}
@@ -122,20 +119,20 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
             </div>
             <div>
               <h3 className="font-display font-black text-xl text-white flex items-center gap-2">
-                <span>The Zenkai Oracle</span>
+                <span>Vibe Discovery Engine</span>
                 <span className="text-[10px] font-mono font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full">
-                  AI VIBE ENGINE
+                  CURATED DISCOVERY
                 </span>
               </h3>
               <p className="text-xs text-zenkai-muted">
-                Align your emotional frequency with the definitive anime cosmos.
+                Match your exact mood with top-tier anime recommendations.
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-zenkai-surface hover:bg-zenkai-elevated text-zenkai-muted hover:text-white border border-white/10 transition-colors"
+            className="p-1.5 rounded-xl bg-zenkai-surface hover:bg-zenkai-elevated text-zenkai-muted hover:text-white border border-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -146,7 +143,7 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
           <div className="space-y-2">
             <label className="text-xs font-mono font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5" />
-              <span>Step 1: Choose Your Core Resonances (Select 1 or more)</span>
+              <span>Step 1: Select Your Vibe (Pick 1 or more)</span>
             </label>
 
             <div className="flex flex-wrap gap-2 pt-1">
@@ -156,7 +153,7 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
                   <button
                     key={tag.id}
                     onClick={() => toggleVibe(tag.id)}
-                    className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-spring border flex items-center gap-2 ${
+                    className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-spring border flex items-center gap-2 cursor-pointer ${
                       isSelected
                         ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-lg shadow-purple-600/25 scale-[1.03]'
                         : 'bg-zenkai-surface/80 hover:bg-zenkai-elevated text-zenkai-muted hover:text-white border-white/10'
@@ -173,18 +170,18 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
           {/* Episode Length Preference */}
           <div className="space-y-2 pt-2">
             <label className="text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider block">
-              Step 2: Time Commitment Tolerance
+              Step 2: Pacing & Length Preference
             </label>
             <div className="grid grid-cols-3 gap-2.5">
               {[
-                { val: 13, label: 'Quick Binge (≤13 eps)' },
-                { val: 26, label: 'Standard Arc (≤26 eps)' },
-                { val: 999, label: 'Epic Saga (Unlimited)' },
+                { val: 13, label: 'Short Series (≤13 eps)' },
+                { val: 26, label: 'Standard (≤26 eps)' },
+                { val: 999, label: 'Long Journey (All)' },
               ].map((opt) => (
                 <button
                   key={opt.val}
                   onClick={() => setMaxEpisodes(opt.val)}
-                  className={`p-2.5 rounded-2xl text-xs font-bold border transition-all text-center ${
+                  className={`p-2.5 rounded-2xl text-xs font-bold border transition-all text-center cursor-pointer ${
                     maxEpisodes === opt.val
                       ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-md shadow-cyan-500/20'
                       : 'bg-zenkai-surface/60 text-zenkai-muted hover:text-white border-white/5'
@@ -196,38 +193,38 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Divinate Launcher Button */}
+          {/* Discovery Launcher Button */}
           <div className="pt-3">
             <button
-              onClick={handleDivinate}
+              onClick={handleDiscover}
               disabled={analyzing}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-display font-black text-sm shadow-xl shadow-indigo-600/30 transition-spring flex items-center justify-center gap-2 btn-press cursor-pointer"
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-display font-black text-sm shadow-xl shadow-indigo-600/30 transition-spring flex items-center justify-center gap-2 btn-press cursor-pointer disabled:opacity-50"
             >
               {analyzing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Consulting Multiverse Timelines...</span>
+                  <span>Matching Catalog Records...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Divinate My Matches</span>
+                  <span>Find My Next Anime</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* Oracle Results Showcase */}
+        {/* Results Showcase */}
         {hasRun && !analyzing && (
           <div className="pt-4 border-t border-white/10 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 fill-amber-400" />
-                <span>Oracle's Chosen Verdicts</span>
+                <span>Curated Recommendations</span>
               </span>
               <span className="text-[11px] font-mono text-zenkai-dim">
-                Top 3 Synergies Discovered
+                Top Matches Found
               </span>
             </div>
 
@@ -252,11 +249,11 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md">
-                          {item.synergy}% SYNERGY
+                          {item.synergy}% MATCH
                         </span>
                         {item.score && (
                           <span className="text-xs font-bold text-amber-400">
-                            ★ {item.score.toFixed(1)}
+                            ★ {Number(item.score).toFixed(1)}
                           </span>
                         )}
                       </div>
@@ -266,7 +263,7 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
                       </h4>
 
                       <p className="text-[11px] text-zenkai-muted leading-relaxed line-clamp-1">
-                        {item.oracleReason}
+                        {item.curatorNote}
                       </p>
                     </div>
                   </div>
@@ -274,9 +271,9 @@ export const ZenkaiOracleModal = ({ isOpen, onClose }) => {
                   <Link
                     to={`/anime/${item.id}`}
                     onClick={onClose}
-                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all"
+                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
                   >
-                    <span>View Chronicle</span>
+                    <span>View Anime</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
