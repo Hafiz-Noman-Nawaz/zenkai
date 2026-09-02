@@ -137,6 +137,36 @@ class EmailService {
       html: this.generateHtmlWrapper('Airing Alert', content),
     });
   }
+
+  async sendFranchiseAnnouncementEmail(user, parentAnimeTitle, newEntryTitle, format, animeId) {
+    if (!user || !user.email) return;
+
+    const name = user.displayName || user.username || 'Friend';
+    const typeLabel = format || 'New Sequel / Movie';
+
+    const content = `
+      <span class="badge" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fcd34d;">🔥 Franchise Radar Alert</span>
+      <h1>New Announcement for ${parentAnimeTitle}! 🌟</h1>
+      <p>Hey ${name}, because you watched and completed <strong>${parentAnimeTitle}</strong>, our radar detected an official new announcement in this franchise:</p>
+      
+      <div class="highlight-box" style="text-align: center; border-color: rgba(245, 158, 11, 0.3);">
+        <span style="color: #f59e0b; font-size: 11px; font-weight: bold; text-transform: uppercase; font-family: monospace;">${typeLabel} Announced</span>
+        <h3 style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 6px 0 0 0;">${newEntryTitle}</h3>
+      </div>
+
+      <p style="font-size: 13px; color: #94a3b8; text-align: center;">Add it to your <strong>Plan to Watch</strong> list now so you don't miss the premiere!</p>
+
+      <div style="text-align: center; margin-top: 24px;">
+        <a href="https://zenkai.vercel.app/anime/${animeId || ''}" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);">View Announcement & Trailer →</a>
+      </div>
+    `;
+
+    return this.sendMail({
+      to: user.email,
+      subject: `🌟 Franchise Radar: New Announcement for "${parentAnimeTitle}"!`,
+      html: this.generateHtmlWrapper('Franchise Announcement Radar', content),
+    });
+  }
 }
 
 module.exports = new EmailService();

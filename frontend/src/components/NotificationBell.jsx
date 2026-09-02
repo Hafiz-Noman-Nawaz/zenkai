@@ -1,14 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Sparkles, Calendar, Check, ExternalLink, Flame, Smartphone, BellRing } from 'lucide-react';
+import {
+  Bell,
+  Sparkles,
+  Calendar,
+  Check,
+  ExternalLink,
+  Flame,
+  Smartphone,
+  BellRing,
+  Tv,
+  Star,
+  Film,
+  Zap,
+} from 'lucide-react';
 import { animeApi } from '../api/anime';
+import { notificationApi } from '../api/notifications';
 import { useAuth } from '../context/AuthContext';
 import { notificationService } from '../services/notificationService';
 
 export const NotificationBell = () => {
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [airingAlerts, setAiringAlerts] = useState([]);
+  const [franchiseAlerts, setFranchiseAlerts] = useState([]);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'airing' | 'franchise'
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPushActive, setIsPushActive] = useState(notificationService.isPushEnabled());
   const dropdownRef = useRef(null);
@@ -18,43 +34,66 @@ export const NotificationBell = () => {
   }, [isOpen]);
 
   useEffect(() => {
-    const fetchAiringAlerts = async () => {
+    const fetchRadarFeed = async () => {
       try {
-        const res = await animeApi.getWeeklySchedule();
-        if (res.success && res.data?.schedule) {
+        if (isAuthenticated) {
+          const res = await notificationApi.getUserRadar();
+          if (res.success && res.data) {
+            const airing = res.data.airingAlerts || [];
+            const franchise = res.data.franchiseAlerts || [];
+            setAiringAlerts(airing);
+            setFranchiseAlerts(franchise);
+            const total = airing.length + franchise.length;
+            setUnreadCount(total);
+
+            // Push notification trigger if enabled
+            if (notificationService.isPushEnabled()) {
+              if (airing.length > 0) {
+                const topAiring = airing[0];
+                notificationService.notifyEpisodeRelease(topAiring.title, topAiring.episode, topAiring.animeId);
+              } else if (franchise.length > 0) {
+                const topFranchise = franchise[0];
+                notificationService.notifyEpisodeRelease(
+                  `🌟 New Announcement: ${topFranchise.title}`,
+                  topFranchise.badge,
+                  topFranchise.animeId
+                );
+              }
+            }
+            return;
+          }
+        }
+
+        // Fallback for guest
+        const schedRes = await animeApi.getWeeklySchedule();
+        if (schedRes.success && schedRes.data?.schedule) {
           const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           const today = days[new Date().getDay()];
-          const todayShows = res.data.schedule[today] || [];
+          const todayShows = schedRes.data.schedule[today] || [];
 
           const alerts = todayShows.slice(0, 6).map((item, idx) => {
             const showId = item.anime?.id || item.anime?.externalId;
             return {
               id: `alert-${showId || idx}`,
+              type: 'AIRING_EPISODE',
               animeId: showId,
               title: item.anime?.title,
               coverImage: item.anime?.coverImage,
-              episode: item.episodeNumber || 'New',
-              airingTime: item.airingTime || 'Today',
-              read: false,
+              episode: item.episode || 'New',
+              badge: `Ep ${item.episode} • Today`,
               timeAgo: 'Broadcasting Today',
             };
           });
 
-          setNotifications(alerts);
+          setAiringAlerts(alerts);
           setUnreadCount(alerts.length);
-
-          // If push notifications are enabled, trigger notification for the top airing release
-          if (notificationService.isPushEnabled() && alerts.length > 0) {
-            const topShow = alerts[0];
-            notificationService.notifyEpisodeRelease(topShow.title, topShow.episode, topShow.animeId);
-          }
         }
       } catch (e) {
         console.warn('Could not load notification alerts:', e);
       }
     };
 
-    fetchAiringAlerts();
+    fetchRadarFeed();
   }, [isAuthenticated]);
 
   // Click outside to close
@@ -69,7 +108,6 @@ export const NotificationBell = () => {
   }, []);
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
   };
 
@@ -86,32 +124,45 @@ export const NotificationBell = () => {
     }
   };
 
+  const allAlerts = [
+    ...airingAlerts.map((a) => ({ ...a, category: 'airing' })),
+    ...franchiseAlerts.map((f) => ({ ...f, category: 'franchise' })),
+  ];
+
+  const displayedAlerts =
+    activeTab === 'airing'
+      ? airingAlerts
+      : activeTab === 'franchise'
+      ? franchiseAlerts
+      : allAlerts;
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-full bg-zenkai-surface/80 hover:bg-zenkai-elevated border border-white/10 text-zenkai-muted hover:text-white transition-spring btn-press"
-        title="Simulcast Notifications"
+        title="Simulcast & Franchise Radar"
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gradient-to-r from-rose-500 to-amber-500 text-[9px] font-bold text-white rounded-full flex items-center justify-center shadow-md animate-pulse">
-            {unreadCount}
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
         <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl glass-luxury border border-white/10 shadow-2xl z-50 p-4 animate-scale-in space-y-3">
+          {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Flame className="w-3.5 h-3.5 text-rose-400" />
-                Simulcast Radar
+                <span>Anime Radar</span>
               </span>
               {unreadCount > 0 && (
                 <span className="text-[10px] font-mono font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-500/30">
-                  {unreadCount} New
+                  {unreadCount} Alerts
                 </span>
               )}
             </div>
@@ -127,13 +178,49 @@ export const NotificationBell = () => {
             )}
           </div>
 
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1 p-1 bg-zenkai-surface/60 rounded-xl border border-white/5 text-[11px]">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 py-1 rounded-lg font-bold transition-colors ${
+                activeTab === 'all'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-zenkai-muted hover:text-white'
+              }`}
+            >
+              All ({allAlerts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('airing')}
+              className={`flex-1 py-1 rounded-lg font-bold transition-colors flex items-center justify-center gap-1 ${
+                activeTab === 'airing'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-zenkai-muted hover:text-white'
+              }`}
+            >
+              <Tv className="w-3 h-3 text-cyan-400" />
+              <span>Episodes ({airingAlerts.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('franchise')}
+              className={`flex-1 py-1 rounded-lg font-bold transition-colors flex items-center justify-center gap-1 ${
+                activeTab === 'franchise'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-zenkai-muted hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>Seasons ({franchiseAlerts.length})</span>
+            </button>
+          </div>
+
           {/* Mobile & Desktop Push Notification Toggle */}
           <div className="p-2.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <Smartphone className="w-4 h-4 text-cyan-400 shrink-0" />
               <div className="min-w-0">
-                <p className="text-[11px] font-bold text-white truncate">Mobile Push Alerts</p>
-                <p className="text-[10px] text-zenkai-dim truncate">Instant ping when episodes stream</p>
+                <p className="text-[11px] font-bold text-white truncate">Mobile Push Radar</p>
+                <p className="text-[10px] text-zenkai-dim truncate">Airing episodes & new season alerts</p>
               </div>
             </div>
 
@@ -160,34 +247,55 @@ export const NotificationBell = () => {
             </div>
           </div>
 
+          {/* Alerts Feed */}
           <div className="space-y-2 max-h-64 overflow-y-auto hide-scrollbar">
-            {notifications.length > 0 ? (
-              notifications.map((n) => (
-                <Link
-                  key={n.id}
-                  to={`/anime/${n.animeId}`}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 p-2.5 rounded-2xl bg-zenkai-surface/60 hover:bg-zenkai-elevated border border-white/5 transition-spring group"
-                >
-                  <img
-                    src={n.coverImage}
-                    alt={n.title}
-                    className="w-10 aspect-[2/3] object-cover rounded-lg shrink-0 shadow-sm"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
-                      {n.title}
-                    </p>
-                    <p className="text-[11px] text-cyan-400 font-mono mt-0.5">
-                      Ep {n.episode} • {n.airingTime}
-                    </p>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-zenkai-dim group-hover:text-white shrink-0 opacity-50" />
-                </Link>
-              ))
+            {displayedAlerts.length > 0 ? (
+              displayedAlerts.map((n) => {
+                const isFranchise = n.type === 'FRANCHISE_ANNOUNCEMENT' || n.category === 'franchise';
+
+                return (
+                  <Link
+                    key={n.id}
+                    to={`/anime/${n.animeId}`}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 p-2.5 rounded-2xl bg-zenkai-surface/60 hover:bg-zenkai-elevated border border-white/5 transition-spring group"
+                  >
+                    <img
+                      src={n.coverImage}
+                      alt={n.title}
+                      className="w-10 aspect-[2/3] object-cover rounded-lg shrink-0 shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span
+                          className={`text-[9px] font-bold font-mono uppercase px-1.5 py-0.5 rounded-md border ${
+                            isFranchise
+                              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                              : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                          }`}
+                        >
+                          {isFranchise ? '🌟 Sequel Radar' : '🎬 Simulcast'}
+                        </span>
+                        {n.parentTitle && (
+                          <span className="text-[10px] text-zenkai-dim truncate">
+                            For {n.parentTitle}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+                        {n.title}
+                      </p>
+                      <p className="text-[10px] text-zenkai-muted font-mono mt-0.5">
+                        {n.badge || `Episode ${n.episode}`}
+                      </p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-zenkai-dim group-hover:text-white shrink-0 opacity-50" />
+                  </Link>
+                );
+              })
             ) : (
               <div className="text-center py-6 text-xs text-zenkai-dim">
-                No active simulcasts broadcasting right now.
+                No active alerts in this category right now.
               </div>
             )}
           </div>
