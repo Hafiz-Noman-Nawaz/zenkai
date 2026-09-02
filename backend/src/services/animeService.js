@@ -233,8 +233,15 @@ class AnimeService {
     const cached = cache.get('weekly_schedule');
     if (cached) return cached;
 
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const defaultGrouped = {};
+    days.forEach((d) => (defaultGrouped[d] = []));
+
     try {
       const schedule = await this.externalProvider.getWeeklySchedule();
+      if (!schedule || typeof schedule !== 'object') {
+        return defaultGrouped;
+      }
 
       // Collect all external anime in schedule and ensure they have valid DB IDs
       const externalAnimes = [];
@@ -249,44 +256,38 @@ class AnimeService {
       });
 
       if (externalAnimes.length > 0) {
-        const externalIds = externalAnimes.map((a) => a.externalId);
-        const existingDbAnimes = await prisma.anime.findMany({
-          where: { externalId: { in: externalIds } },
-          select: { id: true, externalId: true },
-        });
+        try {
+          const externalIds = externalAnimes.map((a) => a.externalId).filter(Boolean);
+          if (externalIds.length > 0) {
+            const existingDbAnimes = await prisma.anime.findMany({
+              where: { externalId: { in: externalIds } },
+              select: { id: true, externalId: true },
+            });
 
-        const idMap = new Map();
-        existingDbAnimes.forEach((dbA) => idMap.set(dbA.externalId, dbA.id));
+            const idMap = new Map();
+            existingDbAnimes.forEach((dbA) => idMap.set(dbA.externalId, dbA.id));
 
-        // For missing anime, upsert in background so they are persisted in DB
-        const missing = externalAnimes.filter((a) => !idMap.has(a.externalId));
-        if (missing.length > 0) {
-          const upsertPromises = missing.slice(0, 15).map(async (m) => {
-            try {
-              const saved = await this.upsertFromExternalData(m);
-              if (saved) idMap.set(m.externalId, saved.id);
-            } catch (e) {}
-          });
-          await Promise.allSettled(upsertPromises);
-        }
-
-        // Assign DB IDs to all schedule anime
-        Object.values(schedule).forEach((dayList) => {
-          if (Array.isArray(dayList)) {
-            dayList.forEach((item) => {
-              if (item.anime) {
-                item.anime.id = idMap.get(item.anime.externalId) || String(item.anime.externalId);
+            // Assign DB IDs to all schedule anime
+            Object.values(schedule).forEach((dayList) => {
+              if (Array.isArray(dayList)) {
+                dayList.forEach((item) => {
+                  if (item.anime) {
+                    item.anime.id = idMap.get(item.anime.externalId) || String(item.anime.externalId);
+                  }
+                });
               }
             });
           }
-        });
+        } catch (dbErr) {
+          console.warn('DB mapping in getWeeklySchedule skipped:', dbErr.message);
+        }
       }
 
       cache.set('weekly_schedule', schedule, 300000); // 5 minutes cache
       return schedule;
     } catch (err) {
       console.warn('Failed to fetch live schedule:', err.message);
-      return {};
+      return defaultGrouped;
     }
   }
 

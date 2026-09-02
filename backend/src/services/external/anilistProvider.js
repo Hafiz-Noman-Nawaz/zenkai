@@ -89,26 +89,38 @@ class AniListProvider extends AnimeDataProvider {
   }
 
   async executeQuery(query, variables = {}) {
-    const res = await fetch(this.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ query, variables }),
-      signal: AbortSignal.timeout(10000),
-    });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    if (!res.ok) {
-      throw new Error(`AniList API failed with HTTP ${res.status}`);
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        console.warn(`AniList API returned HTTP ${res.status}`);
+        return null;
+      }
+
+      const json = await res.json();
+      if (json.errors && json.errors.length > 0) {
+        console.warn('AniList GraphQL error:', json.errors[0].message);
+        return null;
+      }
+
+      return json.data;
+    } catch (err) {
+      console.warn('AniList executeQuery warning:', err.message);
+      return null;
     }
-
-    const json = await res.json();
-    if (json.errors && json.errors.length > 0) {
-      throw new Error(json.errors[0].message);
-    }
-
-    return json.data;
   }
 
   async getAnimeList({ page = 1, limit = 20, sort = 'POPULARITY_DESC', status, season, seasonYear, genre, search }) {
