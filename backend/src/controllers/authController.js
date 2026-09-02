@@ -2,10 +2,19 @@
 const AuthService = require('../services/authService');
 const ApiResponse = require('../utils/apiResponse');
 const catchAsync = require('../utils/asyncWrapper');
+const emailService = require('../services/emailService');
 
 const register = catchAsync(async (req, res) => {
   const { username, email, password, displayName } = req.body;
   const result = await AuthService.registerUser({ username, email, password, displayName });
+
+  // Asynchronously dispatch welcome onboarding email
+  if (result.user) {
+    emailService.sendWelcomeEmail(result.user).catch((err) => {
+      console.warn('Welcome email dispatch warning:', err.message);
+    });
+  }
+
   return ApiResponse.created(res, result, 'User registered successfully');
 });
 

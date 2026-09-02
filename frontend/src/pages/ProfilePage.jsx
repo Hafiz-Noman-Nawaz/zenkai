@@ -18,9 +18,15 @@ import {
   Pin,
   Clock,
   Layers,
+  Bell,
+  Mail,
+  Smartphone,
+  Send,
 } from 'lucide-react';
 import { usersApi, statsApi } from '../api/users';
 import { userAnimeApi } from '../api/userAnime';
+import { notificationApi } from '../api/notifications';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { StatCard } from '../components/StatCard';
@@ -44,6 +50,10 @@ export const ProfilePage = () => {
   const [watching, setWatching] = useState([]);
   const [top4List, setTop4List] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Notification states
+  const [isPushEnabled, setIsPushEnabled] = useState(notificationService.isPushEnabled());
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
 
   // Edit profile state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -440,6 +450,115 @@ export const ProfilePage = () => {
                 showAnime={true}
               />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Notification & Radar Preferences (Only on Own Profile) */}
+      {isOwnProfile && (
+        <div className="bg-zenkai-surface/60 border border-zenkai-border/80 rounded-3xl p-5 sm:p-6 space-y-4 shadow-zenkai-subtle">
+          <div className="flex items-center justify-between">
+            <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
+              <Bell className="w-4 h-4 text-indigo-400" />
+              <span>Simulcast Radar & Notification Preferences</span>
+            </h3>
+            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Real-Time Alerts</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Mobile Push Alert Card */}
+            <div className="p-4 rounded-2xl bg-zenkai-card border border-zenkai-border/70 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Mobile & Browser Push Alerts</h4>
+                    <p className="text-[11px] text-zenkai-muted">Pings your phone when tracked episodes air</p>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const nextState = !isPushEnabled;
+                    if (nextState) {
+                      const granted = await notificationService.requestPermission();
+                      if (granted) {
+                        setIsPushEnabled(true);
+                        toast.success('Mobile & browser push alerts enabled!');
+                        notificationService.sendTestNotification();
+                      } else {
+                        toast.error('Push notification permission was denied by your browser.');
+                      }
+                    } else {
+                      notificationService.setPushEnabled(false);
+                      setIsPushEnabled(false);
+                      toast.info('Push alerts disabled.');
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all ${
+                    isPushEnabled
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                  }`}
+                >
+                  {isPushEnabled ? 'Active ✓' : 'Enable'}
+                </button>
+              </div>
+
+              {isPushEnabled && (
+                <div className="pt-1 flex justify-end">
+                  <button
+                    onClick={() => {
+                      notificationService.sendTestNotification();
+                      toast.success('Dispatched test ping to device!');
+                    }}
+                    className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+                  >
+                    <span>Send Test Push Ping →</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Email Digest Alert Card */}
+            <div className="p-4 rounded-2xl bg-zenkai-card border border-zenkai-border/70 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Email Airing Digests</h4>
+                    <p className="text-[11px] text-zenkai-muted">Dispatches weekly recaps & season alerts</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
+                  Active
+                </span>
+              </div>
+
+              <div className="pt-1 flex justify-end">
+                <button
+                  disabled={sendingTestEmail}
+                  onClick={async () => {
+                    setSendingTestEmail(true);
+                    try {
+                      await notificationApi.sendTestEmail();
+                      toast.success(`Dispatched simulated airing alert to ${currentUser?.email || 'your email'}!`);
+                    } catch (err) {
+                      toast.error('Could not send test email.');
+                    } finally {
+                      setSendingTestEmail(false);
+                    }
+                  }}
+                  className="text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors disabled:opacity-50"
+                >
+                  {sendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                  <span>Send Test Email Digest →</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -9,6 +9,7 @@ const userAnimeRoutes = require('./userAnimeRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const statsRoutes = require('./statsRoutes');
 const listRoutes = require('./listRoutes');
+const notificationRoutes = require('./notificationRoutes');
 
 const { getAllGenres } = require('../controllers/animeController');
 
@@ -34,5 +35,6 @@ router.use('/my-anime', userAnimeRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/statistics', statsRoutes);
 router.use('/lists', listRoutes);
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;

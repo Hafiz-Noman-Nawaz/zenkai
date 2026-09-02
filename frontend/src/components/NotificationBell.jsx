@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Sparkles, Calendar, Check, ExternalLink, Flame } from 'lucide-react';
+import { Bell, Sparkles, Calendar, Check, ExternalLink, Flame, Smartphone, BellRing } from 'lucide-react';
 import { animeApi } from '../api/anime';
 import { useAuth } from '../context/AuthContext';
+import { notificationService } from '../services/notificationService';
 
 export const NotificationBell = () => {
   const { isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isPushActive, setIsPushActive] = useState(notificationService.isPushEnabled());
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    setIsPushActive(notificationService.isPushEnabled());
+  }, [isOpen]);
 
   useEffect(() => {
     const fetchAiringAlerts = async () => {
@@ -20,7 +26,7 @@ export const NotificationBell = () => {
           const today = days[new Date().getDay()];
           const todayShows = res.data.schedule[today] || [];
 
-          const alerts = todayShows.slice(0, 5).map((item, idx) => ({
+          const alerts = todayShows.slice(0, 6).map((item, idx) => ({
             id: `alert-${item.anime?.id || idx}`,
             animeId: item.anime?.id,
             title: item.anime?.title,
@@ -33,6 +39,12 @@ export const NotificationBell = () => {
 
           setNotifications(alerts);
           setUnreadCount(alerts.length);
+
+          // If push notifications are enabled, trigger notification for the top airing release
+          if (notificationService.isPushEnabled() && alerts.length > 0) {
+            const topShow = alerts[0];
+            notificationService.notifyEpisodeRelease(topShow.title, topShow.episode, topShow.animeId);
+          }
         }
       } catch (e) {
         console.warn('Could not load notification alerts:', e);
@@ -56,6 +68,19 @@ export const NotificationBell = () => {
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
+  };
+
+  const handleTogglePush = async () => {
+    if (!isPushActive) {
+      const granted = await notificationService.requestPermission();
+      if (granted) {
+        setIsPushActive(true);
+        notificationService.sendTestNotification();
+      }
+    } else {
+      notificationService.setPushEnabled(false);
+      setIsPushActive(false);
+    }
   };
 
   return (
@@ -99,7 +124,40 @@ export const NotificationBell = () => {
             )}
           </div>
 
-          <div className="space-y-2 max-h-72 overflow-y-auto hide-scrollbar">
+          {/* Mobile & Desktop Push Notification Toggle */}
+          <div className="p-2.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Smartphone className="w-4 h-4 text-cyan-400 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-white truncate">Mobile Push Alerts</p>
+                <p className="text-[10px] text-zenkai-dim truncate">Instant ping when episodes stream</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isPushActive && (
+                <button
+                  onClick={() => notificationService.sendTestNotification()}
+                  className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-mono text-cyan-300 border border-white/10 transition-colors"
+                  title="Send instant test alert to device"
+                >
+                  Test
+                </button>
+              )}
+              <button
+                onClick={handleTogglePush}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold font-mono transition-spring ${
+                  isPushActive
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-indigo-600 text-white shadow-sm'
+                }`}
+              >
+                {isPushActive ? 'Active ✓' : 'Enable'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto hide-scrollbar">
             {notifications.length > 0 ? (
               notifications.map((n) => (
                 <Link
