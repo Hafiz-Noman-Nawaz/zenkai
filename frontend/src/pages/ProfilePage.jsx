@@ -67,6 +67,8 @@ export const ProfilePage = () => {
   // Pinboard selection modal
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
+  const [allLibraryAnimes, setAllLibraryAnimes] = useState([]);
+
   const buildDefaultTop4 = (entries, favs) => {
     if (favs.length >= 4) return favs.slice(0, 4);
     const sorted = [...entries]
