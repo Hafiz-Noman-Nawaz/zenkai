@@ -68,6 +68,7 @@ export const ProfilePage = () => {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isWrappedOpen, setIsWrappedOpen] = useState(false);
   const [allLibraryAnimes, setAllLibraryAnimes] = useState([]);
+  const [userEntries, setUserEntries] = useState([]);
 
   const buildDefaultTop4 = (entries, favs) => {
     if (favs.length >= 4) return favs.slice(0, 4);
@@ -92,7 +93,7 @@ export const ProfilePage = () => {
         isOwnProfile ? userAnimeApi.getUserLibrary({ limit: 1500 }) : Promise.resolve(null),
       ]);
 
-      let userEntries = [];
+      let entries = [];
 
       if (profRes.status === 'fulfilled' && profRes.value?.data?.profile) {
         const prof = profRes.value.data.profile;
@@ -102,18 +103,20 @@ export const ProfilePage = () => {
         setEditAvatar(prof.avatar || '');
 
         if (prof.userAnimes && prof.userAnimes.length > 0) {
-          userEntries = prof.userAnimes;
+          entries = prof.userAnimes;
         }
       }
 
-      if (libraryRes.status === 'fulfilled' && libraryRes.value?.data?.list) {
-        userEntries = libraryRes.value.data.list;
+      if (libraryRes?.status === 'fulfilled' && libraryRes.value?.data?.list) {
+        entries = libraryRes.value.data.list;
       }
 
-      if (userEntries.length > 0) {
-        const favs = userEntries.filter((e) => e.isFavorite && e.anime).map((e) => e.anime);
-        const watch = userEntries.filter((e) => e.status === 'WATCHING' && e.anime).map((e) => e.anime);
-        const allAnimes = userEntries.map((e) => e.anime).filter(Boolean);
+      setUserEntries(entries);
+
+      if (entries.length > 0) {
+        const favs = entries.filter((e) => e.isFavorite && e.anime).map((e) => e.anime);
+        const watch = entries.filter((e) => e.status === 'WATCHING' && e.anime).map((e) => e.anime);
+        const allAnimes = entries.map((e) => e.anime).filter(Boolean);
 
         setFavorites(favs);
         setWatching(watch);
@@ -127,13 +130,13 @@ export const ProfilePage = () => {
             if (Array.isArray(parsed) && parsed.length > 0) {
               setTop4List(parsed);
             } else {
-              setTop4List(buildDefaultTop4(userEntries, favs));
+              setTop4List(buildDefaultTop4(entries, favs));
             }
           } catch (e) {
-            setTop4List(buildDefaultTop4(userEntries, favs));
+            setTop4List(buildDefaultTop4(entries, favs));
           }
         } else {
-          setTop4List(buildDefaultTop4(userEntries, favs));
+          setTop4List(buildDefaultTop4(entries, favs));
         }
       }
 
@@ -210,14 +213,48 @@ export const ProfilePage = () => {
     );
   }
 
-  // Derive stats
-  const totalTitles = stats?.totalAnimeTracked || profile.stats?.totalAnime || 0;
-  const episodesWatched = stats?.totalEpisodesWatched || profile.stats?.episodesWatched || 0;
-  const daysWatched = stats?.daysWatched ? stats.daysWatched.toFixed(1) : (episodesWatched * 24 / 1440).toFixed(1);
+  // Derive stats with multi-tier fallback
+  const totalTitles =
+    stats?.overview?.totalAnime ||
+    stats?.totalAnimeTracked ||
+    profile?.statsSummary?.totalAnime ||
+    userEntries.length ||
+    0;
+
+  const episodesWatched =
+    stats?.overview?.totalEpisodesWatched ||
+    stats?.totalEpisodesWatched ||
+    profile?.statsSummary?.episodesWatched ||
+    userEntries.reduce((sum, e) => sum + (e.progress || 0), 0);
+
+  const completedCount =
+    stats?.overview?.completed ||
+    stats?.statusDistribution?.COMPLETED ||
+    profile?.statsSummary?.COMPLETED ||
+    userEntries.filter((e) => e.status === 'COMPLETED').length ||
+    0;
+
+  const rawAvg =
+    stats?.overview?.averageRating ||
+    stats?.meanScore ||
+    profile?.statsSummary?.meanScore;
+
+  let computedAvg = 'N/A';
+  if (rawAvg) {
+    computedAvg = Number(rawAvg).toFixed(1);
+  } else {
+    const rated = userEntries.filter((e) => e.score && e.score > 0);
+    if (rated.length > 0) {
+      const avg = rated.reduce((s, e) => s + e.score, 0) / rated.length;
+      computedAvg = avg.toFixed(1);
+    }
+  }
+
+  const daysWatched = ((episodesWatched * 24) / 1440).toFixed(1);
   const hoursWatched = Math.round((episodesWatched * 24) / 60);
-  const averageRating = stats?.meanScore ? stats.meanScore.toFixed(1) : 'N/A';
-  const statusCounts = stats?.statusDistribution || {};
-  const genreBreakdown = stats?.genreBreakdown || [];
+  const averageRating = computedAvg;
+  const statusCounts = stats?.statusDistribution || profile?.statsSummary || {};
+  const genreBreakdown = stats?.genreDistribution || stats?.genreBreakdown || [];
 
   return (
     <div className="space-y-10 pb-20">
@@ -298,7 +335,7 @@ export const ProfilePage = () => {
       <OtakuPassport
         user={profile}
         stats={stats}
-        library={allLibraryAnimes}
+        library={userEntries}
         topFavorites={top4List.length > 0 ? top4List : favorites}
       />
 

@@ -2,10 +2,34 @@
 // Calculates real player levels, rank badges, and XP thresholds
 
 export const calculateXP = (stats = {}, library = []) => {
-  const completedCount = stats.completedCount || library.filter((e) => e.status === 'COMPLETED').length || 0;
-  const watchingCount = stats.watchingCount || library.filter((e) => e.status === 'WATCHING').length || 0;
-  const totalEpisodes = stats.totalEpisodes || library.reduce((acc, curr) => acc + (curr.progress || 0), 0) || (completedCount * 12);
-  const reviewsCount = stats.reviewsCount || 0;
+  const completedCount =
+    stats.completedCount ||
+    stats.overview?.completed ||
+    library.filter((e) => e.status === 'COMPLETED').length ||
+    0;
+
+  const watchingCount =
+    stats.watchingCount ||
+    stats.overview?.watching ||
+    library.filter((e) => e.status === 'WATCHING').length ||
+    0;
+
+  const totalEpisodes =
+    stats.totalEpisodes ||
+    stats.overview?.totalEpisodesWatched ||
+    library.reduce(
+      (acc, curr) =>
+        acc +
+        (curr.progress && curr.progress > 0
+          ? curr.progress
+          : curr.status === 'COMPLETED'
+          ? curr.anime?.episodes || 12
+          : 0),
+      0
+    ) ||
+    completedCount * 12;
+
+  const reviewsCount = stats.reviewsCount || stats.overview?.reviewsCount || 0;
 
   // XP Formula
   // 1 Episode = 15 XP
