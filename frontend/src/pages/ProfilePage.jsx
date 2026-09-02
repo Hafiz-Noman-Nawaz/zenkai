@@ -521,7 +521,7 @@ export const ProfilePage = () => {
               )}
             </div>
 
-            {/* Email Digest & Franchise Radar Alert Card */}
+            {/* Email Digest Alert Card */}
             <div className="p-4 rounded-2xl bg-zenkai-card border border-zenkai-border/70 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -529,8 +529,8 @@ export const ProfilePage = () => {
                     <Mail className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white">Email Radar & Announcements</h4>
-                    <p className="text-[11px] text-zenkai-muted">Pings on new episodes (Watching) & sequels (Completed)</p>
+                    <h4 className="text-xs font-bold text-white">Email Airing Digests</h4>
+                    <p className="text-[11px] text-zenkai-muted">Dispatches weekly recaps & season alerts</p>
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
@@ -538,43 +538,24 @@ export const ProfilePage = () => {
                 </span>
               </div>
 
-              <div className="pt-2 flex flex-wrap items-center justify-end gap-2 border-t border-white/5">
+              <div className="pt-1 flex justify-end">
                 <button
                   disabled={sendingTestEmail}
                   onClick={async () => {
                     setSendingTestEmail(true);
                     try {
-                      await notificationApi.sendTestAiringEmail();
-                      toast.success(`Dispatched test episode alert to ${currentUser?.email || 'your email'}!`);
+                      await notificationApi.sendTestEmail();
+                      toast.success(`Dispatched simulated airing alert to ${currentUser?.email || 'your email'}!`);
                     } catch (err) {
                       toast.error('Could not send test email.');
                     } finally {
                       setSendingTestEmail(false);
                     }
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-[11px] font-mono text-indigo-300 border border-indigo-500/30 flex items-center gap-1 transition-colors disabled:opacity-50"
+                  className="text-[11px] font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors disabled:opacity-50"
                 >
                   {sendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                  <span>Test Airing Email</span>
-                </button>
-
-                <button
-                  disabled={sendingTestEmail}
-                  onClick={async () => {
-                    setSendingTestEmail(true);
-                    try {
-                      await notificationApi.sendTestAnnouncementEmail();
-                      toast.success(`Dispatched test franchise sequel announcement to ${currentUser?.email || 'your email'}!`);
-                    } catch (err) {
-                      toast.error('Could not send test announcement email.');
-                    } finally {
-                      setSendingTestEmail(false);
-                    }
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-[11px] font-mono text-amber-300 border border-amber-500/30 flex items-center gap-1 transition-colors disabled:opacity-50"
-                >
-                  {sendingTestEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-amber-400" />}
-                  <span>Test Sequel Alert</span>
+                  <span>Send Test Email Digest →</span>
                 </button>
               </div>
             </div>
