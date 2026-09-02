@@ -31,6 +31,7 @@ import { BatchAddModal } from '../components/BatchAddModal';
 import { RatingBadge } from '../components/RatingStars';
 import { EmptyState } from '../components/EmptyState';
 import { AnimeImage } from '../components/AnimeImage';
+import { QuickScorePicker } from '../components/QuickScorePicker';
 
 export const MyAnimePage = () => {
   const { user, isAuthenticated } = useAuth();
@@ -146,6 +147,32 @@ export const MyAnimePage = () => {
       }
     } catch (err) {
       toast.error(err.message || 'Failed to update progress');
+    }
+  };
+
+  // Quick inline rating score change
+  const handleQuickScore = async (entry, newScore) => {
+    const anime = entry.anime;
+    const animeId = anime?.id || entry.animeId || anime?.externalId;
+    if (!animeId) return;
+
+    // Optimistically update score in local state immediately
+    setEntries((prev) =>
+      prev.map((item) => (item.id === entry.id ? { ...item, score: newScore } : item))
+    );
+
+    try {
+      const res = await userAnimeApi.updateScore(animeId, newScore);
+      if (res.success) {
+        toast.success(
+          newScore
+            ? `Rated "${anime?.title || 'Anime'}" ${newScore}/10`
+            : `Cleared rating for "${anime?.title || 'Anime'}"`
+        );
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to update rating');
+      fetchList(true);
     }
   };
 
@@ -536,13 +563,12 @@ export const MyAnimePage = () => {
                     </button>
                   </div>
 
-                  {/* Personal Rating */}
-                  <div className="shrink-0 min-w-[54px] text-right">
-                    {entry.score ? (
-                      <RatingBadge score={entry.score} size="sm" />
-                    ) : (
-                      <span className="text-[11px] text-zenkai-dim font-mono">— / 10</span>
-                    )}
+                  {/* Personal Rating (Inline Fast Score Picker) */}
+                  <div className="shrink-0">
+                    <QuickScorePicker
+                      currentScore={entry.score}
+                      onScoreChange={(newScore) => handleQuickScore(entry, newScore)}
+                    />
                   </div>
 
                   {/* Favorite Toggle */}
