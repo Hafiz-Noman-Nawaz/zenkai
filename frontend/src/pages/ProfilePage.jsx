@@ -695,6 +695,7 @@ export const ProfilePage = () => {
         user={profile}
         stats={stats}
         favorites={top4List.length > 0 ? top4List : favorites}
+        library={allLibraryAnimes}
       />
     </div>
   );
