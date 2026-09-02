@@ -106,6 +106,11 @@ export const ProfilePage = () => {
         if (prof.userAnimes && prof.userAnimes.length > 0) {
           entries = prof.userAnimes;
         }
+
+        // Database-synchronized pinned anime (across phone, laptop, etc.)
+        if (prof.pinnedAnimes && prof.pinnedAnimes.length > 0) {
+          setTop4List(prof.pinnedAnimes);
+        }
       }
 
       if (libraryRes?.status === 'fulfilled' && libraryRes.value?.data?.list) {
@@ -123,24 +128,27 @@ export const ProfilePage = () => {
         setWatching(watch);
         setAllLibraryAnimes(allAnimes);
 
-        // Check custom pinned top 4 from localStorage
-        const savedPinsRaw =
-          localStorage.getItem(`zenkai_pins_${targetUsername}`) ||
-          localStorage.getItem('zenkai_pins_global');
+        const dbPins = profRes.status === 'fulfilled' ? profRes.value?.data?.profile?.pinnedAnimes : null;
+        if (!dbPins || dbPins.length === 0) {
+          // Check custom pinned top 4 from localStorage fallback
+          const savedPinsRaw =
+            localStorage.getItem(`zenkai_pins_${targetUsername}`) ||
+            localStorage.getItem('zenkai_pins_global');
 
-        if (savedPinsRaw) {
-          try {
-            const parsed = JSON.parse(savedPinsRaw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setTop4List(parsed);
-            } else {
+          if (savedPinsRaw) {
+            try {
+              const parsed = JSON.parse(savedPinsRaw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setTop4List(parsed);
+              } else {
+                setTop4List(buildDefaultTop4(entries, favs));
+              }
+            } catch (e) {
               setTop4List(buildDefaultTop4(entries, favs));
             }
-          } catch (e) {
+          } else {
             setTop4List(buildDefaultTop4(entries, favs));
           }
-        } else {
-          setTop4List(buildDefaultTop4(entries, favs));
         }
       }
 
@@ -182,12 +190,22 @@ export const ProfilePage = () => {
     }
   };
 
-  const handleSavePins = (newPins) => {
+  const handleSavePins = async (newPins) => {
     setTop4List(newPins);
     try {
       localStorage.setItem(`zenkai_pins_${targetUsername}`, JSON.stringify(newPins));
       localStorage.setItem('zenkai_pins_global', JSON.stringify(newPins));
     } catch (e) {}
+
+    // Synchronize to PostgreSQL database so it updates everywhere (phone, laptop, tablet)
+    if (isOwnProfile && isAuthenticated) {
+      try {
+        const animeIds = (newPins || []).map((p) => p.id).filter(Boolean);
+        await usersApi.updatePins(animeIds);
+      } catch (err) {
+        console.error('Failed to sync pins to database:', err);
+      }
+    }
   };
 
   const handleQuickRemovePin = (slotIdx, e) => {

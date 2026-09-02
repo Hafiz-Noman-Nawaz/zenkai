@@ -20,7 +20,14 @@ const updateMe = catchAsync(async (req, res) => {
   return ApiResponse.success(res, { user: updatedUser }, 'Profile updated successfully');
 });
 
+const updateMyPins = catchAsync(async (req, res) => {
+  const { animeIds } = req.body;
+  const pinnedAnimes = await UserService.updateUserPins(req.user.id, animeIds);
+  return ApiResponse.success(res, { pinnedAnimes }, 'Top 4 pinned anime updated successfully');
+});
+
 module.exports = {
   getPublicProfile,
   updateMe,
+  updateMyPins,
 };

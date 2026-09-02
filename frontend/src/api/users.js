@@ -8,6 +8,10 @@ export const usersApi = {
   updateProfile: async (profileData) => {
     return apiClient.patch('/users/me', profileData);
   },
+
+  updatePins: async (animeIds) => {
+    return apiClient.put('/users/me/pins', { animeIds });
+  },
 };
 
 export const statsApi = {

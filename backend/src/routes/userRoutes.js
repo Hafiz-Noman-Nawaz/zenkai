@@ -12,6 +12,7 @@ router.get('/me/statistics', authMiddleware, statsController.getMyStatistics);
 router.get('/:username/statistics', statsController.getUserStatisticsByUsername);
 
 // Profile endpoints
+router.put('/me/pins', authMiddleware, userController.updateMyPins);
 router.patch('/me', authMiddleware, validate(updateProfileSchema), userController.updateMe);
 router.get('/:username', userController.getPublicProfile);
 

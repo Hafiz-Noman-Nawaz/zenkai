@@ -36,12 +36,25 @@ class UserService {
             },
           },
         },
+        customLists: {
+          where: { title: '__top4_pins__' },
+          include: {
+            entries: {
+              orderBy: { order: 'asc' },
+              include: {
+                anime: true,
+              },
+            },
+          },
+        },
       },
     });
 
     if (!user) {
       throw ApiError.notFound(`User '@${username}' not found`);
     }
+
+    const pinnedAnimes = user.customLists?.[0]?.entries?.map((e) => e.anime).filter(Boolean) || [];
 
     // Compute comprehensive list distribution for public profile summary
     const statusCounts = await prisma.userAnime.groupBy({
@@ -82,6 +95,7 @@ class UserService {
 
     return {
       ...user,
+      pinnedAnimes,
       statsSummary: {
         totalAnime: user._count.userAnimes,
         reviewsCount: user._count.reviews,
@@ -92,6 +106,61 @@ class UserService {
         ...statusMap,
       },
     };
+  }
+
+  static async updateUserPins(userId, animeIds = []) {
+    // Find or create the __top4_pins__ custom list
+    let list = await prisma.customList.findFirst({
+      where: { userId, title: '__top4_pins__' },
+    });
+
+    if (!list) {
+      list = await prisma.customList.create({
+        data: {
+          userId,
+          title: '__top4_pins__',
+          description: 'Top 4 Masterpiece Anime Milestone Pins',
+          isPublic: true,
+        },
+      });
+    }
+
+    // Clear old entries
+    await prisma.customListEntry.deleteMany({
+      where: { listId: list.id },
+    });
+
+    // Insert new entries in order (up to 4)
+    const validIds = (animeIds || []).filter(Boolean).slice(0, 4);
+
+    if (validIds.length > 0) {
+      await prisma.customListEntry.createMany({
+        data: validIds.map((animeId, order) => ({
+          listId: list.id,
+          animeId,
+          order,
+        })),
+      });
+    }
+
+    // Fetch and return populated entries with anime data
+    const updatedEntries = await prisma.customListEntry.findMany({
+      where: { listId: list.id },
+      orderBy: { order: 'asc' },
+      include: {
+        anime: {
+          include: {
+            genres: {
+              include: {
+                genre: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return updatedEntries.map((e) => e.anime).filter(Boolean);
   }
 
   static async updateProfile(userId, { displayName, bio, avatar, username }) {
