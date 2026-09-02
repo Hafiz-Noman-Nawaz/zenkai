@@ -1,0 +1,168 @@
+// Prisma Schema for Zenkai - Anime Tracking & Discovery Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WatchStatus {
+  WATCHING
+  COMPLETED
+  PLAN_TO_WATCH
+  ON_HOLD
+  DROPPED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  username     String       @unique
+  email        String       @unique
+  passwordHash String
+  displayName  String?
+  bio          String?
+  avatar       String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  userAnimes   UserAnime[]
+  reviews      Review[]
+  customLists  CustomList[]
+
+  @@map("users")
+}
+
+model Anime {
+  id            String            @id @default(cuid())
+  externalId    Int?              @unique
+  title         String
+  englishTitle  String?
+  japaneseTitle String?
+  synopsis      String?
+  type          String?           // TV, MOVIE, OVA, ONA, SPECIAL
+  status        String?           // FINISHED, RELEASING, NOT_YET_RELEASED, CANCELLED
+  episodes      Int?
+  duration      Int?              // in minutes
+  startDate     DateTime?
+  endDate       DateTime?
+  season        String?           // WINTER, SPRING, SUMMER, FALL
+  seasonYear    Int?
+  score         Float?
+  popularity    Int?
+  rank          Int?
+  coverImage    String?
+  bannerImage   String?
+  trailerUrl    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  genres        AnimeGenre[]
+  userAnimes    UserAnime[]
+  reviews       Review[]
+  listEntries   CustomListEntry[]
+
+  @@index([title])
+  @@index([seasonYear, season])
+  @@index([score])
+  @@index([popularity])
+  @@map("animes")
+}
+
+model Genre {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  slug      String       @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  animes    AnimeGenre[]
+
+  @@map("genres")
+}
+
+model AnimeGenre {
+  animeId   String
+  genreId   String
+  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  genre     Genre    @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([animeId, genreId])
+  @@map("anime_genres")
+}
+
+model UserAnime {
+  id          String      @id @default(cuid())
+  userId      String
+  animeId     String
+  status      WatchStatus @default(PLAN_TO_WATCH)
+  score       Float?      // 1.0 to 10.0
+  progress    Int         @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  notes       String?
+  isFavorite  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime       Anime       @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, animeId])
+  @@index([userId, status])
+  @@index([userId, isFavorite])
+  @@map("user_animes")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  animeId   String
+  title     String
+  content   String
+  rating    Float    // 1.0 to 10.0
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, animeId])
+  @@index([animeId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model CustomList {
+  id          String            @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  isPublic    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     CustomListEntry[]
+
+  @@index([userId])
+  @@map("custom_lists")
+}
+
+model CustomListEntry {
+  id        String     @id @default(cuid())
+  listId    String
+  animeId   String
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  list      CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  anime     Anime      @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, animeId])
+  @@index([listId])
+  @@map("custom_list_entries")
+}

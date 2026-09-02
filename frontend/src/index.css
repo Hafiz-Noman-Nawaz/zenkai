@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #06070a;
+    color: #f3f4f6;
+    overflow-x: hidden;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Static lightweight gradient background without fixed attachment */
+    background: radial-gradient(circle at top left, #0d1222 0%, #06070a 45%, #050608 100%);
+  }
+
+  /* Sleek Lightweight Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #06070a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6366f1;
+  }
+}
+
+@layer utilities {
+  /* Fast GPU-friendly Glassmorphism (light blur + solid opacity) */
+  .glass-card {
+    background: rgba(16, 22, 36, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-luxury {
+    background: linear-gradient(135deg, rgba(20, 26, 42, 0.9) 0%, rgba(10, 14, 24, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  }
+
+  .glass-rainbow {
+    background: rgba(12, 16, 26, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+  }
+
+  .glass-panel {
+    background: rgba(10, 14, 22, 0.92);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .kanji-watermark {
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .transition-spring {
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* ===================================================
+   LIGHTWEIGHT FAST ANIMATIONS (ZERO GPU STRAIN)
+   =================================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Lightweight Interactive Hover */
+.hover-card-lift {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
+}
+
+.hover-card-lift:hover {
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.btn-press {
+  transition: transform 0.1s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
