@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { SearchModal } from './components/SearchModal';
 import { KamehamehaCursor } from './components/KamehamehaCursor';
+import { ZenkaiLounge } from './components/ZenkaiLounge';
 import { Loader2 } from 'lucide-react';
 
 // Priority Core Pages
@@ -88,6 +89,9 @@ function MainLayout() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
+
+      {/* Floating Zenkai Lounge 24/7 Lofi & Audio Player */}
+      <ZenkaiLounge />
     </div>
   );
 }

@@ -35,6 +35,7 @@ import { ReviewCard } from '../components/ReviewCard';
 import { RatingBadge } from '../components/RatingStars';
 import { AnimeImage } from '../components/AnimeImage';
 import { WrappedModal } from '../components/WrappedModal';
+import { OtakuPassport } from '../components/OtakuPassport';
 
 export const ProfilePage = () => {
   const { username } = useParams();
@@ -268,6 +269,14 @@ export const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* 3D Holographic Otaku Passport */}
+      <OtakuPassport
+        user={profile}
+        stats={stats}
+        library={allLibraryAnimes}
+        topFavorites={top4List.length > 0 ? top4List : favorites}
+      />
 
       {/* 2. Top 4 Favorites Pinboard Showcase (Letterboxd Style) */}
       <div className="space-y-4">

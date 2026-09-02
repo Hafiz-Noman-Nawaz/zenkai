@@ -10,6 +10,7 @@ import { AnimeRail } from '../components/AnimeRail';
 import { ReviewCard } from '../components/ReviewCard';
 import { RailSkeleton } from '../components/SkeletonLoader';
 import { AnimeImage } from '../components/AnimeImage';
+import { VersusArena } from '../components/VersusArena';
 
 export const HomePage = () => {
   const { user, isAuthenticated } = useAuth();
@@ -382,7 +383,12 @@ export const HomePage = () => {
         </div>
       )}
 
-      {/* 4. RECENT COMMUNITY REVIEWS SECTION */}
+      {/* 4. Weekly Community Versus Duel Arena */}
+      <section className="pt-2">
+        <VersusArena />
+      </section>
+
+      {/* 5. RECENT COMMUNITY REVIEWS SECTION */}
       {recentReviews.length > 0 && (
         <section className="space-y-6 pt-6">
           <div className="flex items-end justify-between">

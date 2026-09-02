@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Compass, BookOpen, MessageSquare, User as UserIcon, LogOut, Menu, X, Sparkles, ChevronDown, Swords, Layers } from 'lucide-react';
+import { Search, Compass, BookOpen, MessageSquare, User as UserIcon, LogOut, Menu, X, Sparkles, ChevronDown, Swords, Layers, Wand2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NotificationBell } from './NotificationBell';
+import { ZenkaiOracleModal } from './ZenkaiOracleModal';
 
 export const Navbar = ({ onOpenSearch }) => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -11,6 +12,7 @@ export const Navbar = ({ onOpenSearch }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isOracleOpen, setIsOracleOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,7 +87,17 @@ export const Navbar = ({ onOpenSearch }) => {
           </nav>
 
           {/* Right Action Icons & Auth Profile */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* Zenkai Oracle AI Vibe Recommender */}
+            <button
+              onClick={() => setIsOracleOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-cyan-500/30 hover:from-purple-600/50 hover:to-cyan-500/50 border border-purple-500/40 text-purple-200 text-xs font-bold transition-all shadow-md shadow-purple-500/10 btn-press group"
+              title="Zenkai Oracle AI Vibe Engine"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 group-hover:rotate-12 transition-transform" />
+              <span className="hidden md:inline font-mono">Oracle</span>
+            </button>
+
             {/* Live Simulcast Broadcast Badge */}
             <Link
               to="/schedule"
@@ -255,6 +267,12 @@ export const Navbar = ({ onOpenSearch }) => {
           )}
         </div>
       )}
+
+      {/* Zenkai Oracle Modal */}
+      <ZenkaiOracleModal
+        isOpen={isOracleOpen}
+        onClose={() => setIsOracleOpen(false)}
+      />
     </>
   );
 };

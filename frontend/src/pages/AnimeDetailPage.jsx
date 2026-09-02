@@ -34,6 +34,8 @@ import { ReviewModal } from '../components/ReviewModal';
 import { AnimeImage } from '../components/AnimeImage';
 import { SeiyuuModal } from '../components/SeiyuuModal';
 import { ThemesJukebox } from '../components/ThemesJukebox';
+import { useAmbientGlow } from '../hooks/useAmbientGlow';
+import { FranchiseUniverseGraph } from '../components/FranchiseUniverseGraph';
 
 export const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -266,9 +268,18 @@ export const AnimeDetailPage = () => {
   };
 
   const totalMembers = stats?.totalTracked || 0;
+  const ambientStyle = useAmbientGlow(anime);
+
+  const [franchiseView, setFranchiseView] = useState('graph');
 
   return (
-    <div className="space-y-10 pb-24">
+    <div className="relative space-y-10 pb-24">
+      {/* Dynamic Reactive Ambient Aura */}
+      <div
+        className="pointer-events-none absolute -top-28 inset-x-0 h-[600px] opacity-70 transition-all duration-1000 -z-10 blur-3xl"
+        style={ambientStyle}
+      />
+
       {/* 1. Cinematic Banner Backdrop */}
       <div className="relative -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 -mt-24 sm:-mt-28 h-[280px] sm:h-[380px] lg:h-[440px] overflow-hidden">
         {anime.bannerImage ? (
@@ -288,7 +299,7 @@ export const AnimeDetailPage = () => {
       <div className="relative -mt-36 sm:-mt-48 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
         {/* Left Column: Poster & Interactive Tracking Panel */}
         <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-          {/* Poster Container */}
+          {/* Poster Container with Color-Reactive Glow */}
           <div className="relative aspect-[2/3] w-full max-w-[280px] sm:max-w-[320px] lg:max-w-none mx-auto rounded-3xl overflow-hidden shadow-2xl border-2 border-white/10 group">
             <AnimeImage
               src={anime.coverImage}
@@ -634,16 +645,43 @@ export const AnimeDetailPage = () => {
 
               {/* Franchise Watch Order & Relations Tree */}
               <div className="bg-zenkai-surface/60 border border-zenkai-border/80 rounded-3xl p-5 space-y-4 shadow-zenkai-subtle">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-indigo-400" />
-                    <span>Franchise Relations & Watch Order</span>
-                  </h4>
-                  <span className="text-[11px] font-mono text-cyan-400">
-                    {franchiseData?.isStandalone
-                      ? 'Standalone Story'
-                      : `${franchiseData?.totalInstallments || 1} Chronological Installments`}
-                  </span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-indigo-400" />
+                      <span>Franchise Relations & Watch Order</span>
+                    </h4>
+                    <span className="text-[11px] font-mono text-cyan-400">
+                      {franchiseData?.isStandalone
+                        ? 'Standalone Story'
+                        : `${franchiseData?.totalInstallments || 1} Chronological Installments`}
+                    </span>
+                  </div>
+
+                  {!franchiseData?.isStandalone && (
+                    <div className="flex items-center gap-1 bg-zenkai-card p-1 rounded-xl border border-zenkai-border self-start sm:self-auto">
+                      <button
+                        onClick={() => setFranchiseView('graph')}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                          franchiseView === 'graph'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-zenkai-muted hover:text-white'
+                        }`}
+                      >
+                        🕸️ Universe Graph
+                      </button>
+                      <button
+                        onClick={() => setFranchiseView('timeline')}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                          franchiseView === 'timeline'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-zenkai-muted hover:text-white'
+                        }`}
+                      >
+                        📋 Timeline Cards
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {franchiseData?.isStandalone ? (
@@ -661,6 +699,14 @@ export const AnimeDetailPage = () => {
                       100% Standalone
                     </span>
                   </div>
+                ) : franchiseView === 'graph' ? (
+                  <FranchiseUniverseGraph
+                    currentAnime={anime}
+                    franchiseData={{
+                      rootTitle: franchiseData?.rootTitle,
+                      entries: franchiseData?.chronologicalOrder || [],
+                    }}
+                  />
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {(franchiseData?.chronologicalOrder || []).map((item) => {
