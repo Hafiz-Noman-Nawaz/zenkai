@@ -360,7 +360,7 @@ class AnimeService {
   async upsertFromExternalData(externalData) {
     if (!externalData || !externalData.externalId) return null;
 
-    const { genres = [], studio, characters, ...animeFields } = externalData;
+    const { id, genres = [], studio, characters, ...animeFields } = externalData;
 
     // Ensure genres exist in DB
     const genreRecords = [];

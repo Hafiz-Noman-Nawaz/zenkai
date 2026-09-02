@@ -42,6 +42,14 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
     console.error('Unhandled Internal Error:', err);
   }
 
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
   return res.status(error.statusCode).json(response);
 };
 
