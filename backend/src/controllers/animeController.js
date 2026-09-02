@@ -4,11 +4,12 @@ const ApiResponse = require('../utils/apiResponse');
 const catchAsync = require('../utils/asyncWrapper');
 
 const getAnimeList = catchAsync(async (req, res) => {
-  const { page, limit, q, genre, status, season, seasonYear, type, letter, sortBy, sortOrder } = req.query;
+  const { page, limit, q, search, genre, status, season, seasonYear, type, letter, sortBy, sortOrder } = req.query;
+  const searchTerm = q || search;
   const result = await AnimeService.getAnimeList({
     page,
     limit,
-    q,
+    q: searchTerm,
     genre,
     status,
     season,
@@ -22,8 +23,9 @@ const getAnimeList = catchAsync(async (req, res) => {
 });
 
 const searchAnime = catchAsync(async (req, res) => {
-  const { q, page, limit } = req.query;
-  const result = await AnimeService.searchAnime({ q, page, limit });
+  const { q, search, page, limit } = req.query;
+  const searchTerm = q || search;
+  const result = await AnimeService.searchAnime({ q: searchTerm, page, limit });
   return ApiResponse.success(res, { anime: result.animes }, 'Anime search results', 200, result.meta);
 });
 

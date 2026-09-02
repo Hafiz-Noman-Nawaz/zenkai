@@ -16,6 +16,7 @@ import { animeApi } from '../api/anime';
 import { userAnimeApi } from '../api/userAnime';
 import { AnimeImage } from './AnimeImage';
 import { useToast } from '../context/ToastContext';
+import { soundFX } from '../utils/soundEffects';
 
 export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
   const toast = useToast();
@@ -23,37 +24,64 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [initialPopular, setInitialPopular] = useState([]);
   const [searching, setSearching] = useState(false);
   const [addedMap, setAddedMap] = useState({}); // { [animeId]: { status, progress, score } }
   const [loadingActionId, setLoadingActionId] = useState(null);
   const [sessionCount, setSessionCount] = useState(0);
 
+  // Fetch initial popular suggestions when modal opens
+  useEffect(() => {
+    const fetchPopular = async () => {
+      try {
+        const res = await animeApi.getAnimeList({ sortBy: 'popularity', limit: 12 });
+        const list = res.data?.anime || res.data?.animes || [];
+        setInitialPopular(list);
+        if (!query.trim()) {
+          setResults(list);
+        }
+      } catch (err) {
+        console.error('Failed to load popular suggestions:', err);
+      }
+    };
+    fetchPopular();
+  }, []);
+
   // Debounced search
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
-      setResults([]);
+    if (!query.trim()) {
+      setResults(initialPopular);
+      setSearching(false);
       return;
     }
 
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await animeApi.getAnimeList({ search: query.trim(), limit: 12 });
-        const list = res.data?.animes || res.data?.anime || [];
+        const res = await animeApi.searchAnime(query.trim(), 15);
+        const list = res.data?.anime || res.data?.animes || [];
         setResults(list);
       } catch (err) {
-        console.error('Search failed:', err);
+        // Fallback to getAnimeList with q
+        try {
+          const fallbackRes = await animeApi.getAnimeList({ q: query.trim(), limit: 15 });
+          const list = fallbackRes.data?.anime || fallbackRes.data?.animes || [];
+          setResults(list);
+        } catch (e) {
+          console.error('Search failed:', e);
+        }
       } finally {
         setSearching(false);
       }
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, initialPopular]);
 
   const handleQuickAdd = async (anime, status, score = null) => {
     const targetId = anime.id || anime.externalId;
     setLoadingActionId(`${targetId}-${status}`);
+    soundFX.playEpisodeChime();
 
     try {
       const maxEp = anime.episodes || 12;
@@ -72,7 +100,7 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
           [targetId]: { status, progress, score },
         }));
         setSessionCount((prev) => prev + 1);
-        toast.success(`Added "${anime.title}" (${status})`);
+        toast.success(`Added "${anime.title}" as ${status}`);
         if (onUpdated) onUpdated();
       }
     } catch (err) {
@@ -126,7 +154,7 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Type any anime name (e.g., Death Note, Naruto, Demon Slayer, Steins;Gate)..."
+              placeholder="Search any anime (e.g. Naruto, Death Note, Demon Slayer, Attack on Titan)..."
               className="w-full bg-zenkai-surface border border-zenkai-border rounded-2xl pl-11 pr-10 py-3 text-sm text-white placeholder:text-zenkai-dim focus:outline-none focus:border-indigo-500 transition-colors shadow-inner"
             />
             {searching && (
@@ -135,7 +163,7 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
             {query && !searching && (
               <button
                 onClick={() => setQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zenkai-dim hover:text-white text-xs"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zenkai-dim hover:text-white text-xs cursor-pointer"
               >
                 Clear
               </button>
@@ -143,8 +171,14 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
           </div>
         </div>
 
+        {/* Section Tag */}
+        <div className="pt-2 pb-1 text-[11px] font-mono font-bold text-zenkai-dim uppercase tracking-wider flex items-center justify-between">
+          <span>{query.trim() ? `Search Results for "${query}"` : 'Popular Anime Suggestions:'}</span>
+          <span className="text-indigo-400 font-normal">{results.length} Titles Available</span>
+        </div>
+
         {/* Results List */}
-        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 pt-2 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 pt-1 hide-scrollbar">
           {results.length > 0 ? (
             results.map((anime) => {
               const targetId = anime.id || anime.externalId;
@@ -193,7 +227,7 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
                     <button
                       onClick={() => handleQuickAdd(anime, 'COMPLETED')}
                       disabled={loadingActionId === `${targetId}-COMPLETED`}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-spring border ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-spring border cursor-pointer ${
                         addedInfo?.status === 'COMPLETED'
                           ? 'bg-emerald-600 text-white border-emerald-400'
                           : 'bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border-indigo-500/30'
@@ -210,7 +244,7 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
                     <button
                       onClick={() => handleQuickAdd(anime, 'WATCHING')}
                       disabled={loadingActionId === `${targetId}-WATCHING`}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-spring border ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-spring border cursor-pointer ${
                         addedInfo?.status === 'WATCHING'
                           ? 'bg-cyan-600 text-white border-cyan-400'
                           : 'bg-zenkai-card hover:bg-zenkai-elevated text-zenkai-muted hover:text-white border-zenkai-border'
@@ -227,7 +261,7 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
                     <button
                       onClick={() => handleQuickAdd(anime, 'PLAN_TO_WATCH')}
                       disabled={loadingActionId === `${targetId}-PLAN_TO_WATCH`}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-spring border ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-spring border cursor-pointer ${
                         addedInfo?.status === 'PLAN_TO_WATCH'
                           ? 'bg-purple-600 text-white border-purple-400'
                           : 'bg-zenkai-card hover:bg-zenkai-elevated text-zenkai-muted hover:text-white border-zenkai-border'
@@ -244,20 +278,15 @@ export const BatchAddModal = ({ isOpen, onClose, onUpdated }) => {
                 </div>
               );
             })
-          ) : query.length >= 2 && !searching ? (
+          ) : !searching ? (
             <div className="text-center py-12 text-zenkai-dim text-xs space-y-1">
               <p>No anime matched "{query}".</p>
-              <p className="text-[11px]">Try searching by alternate titles or main franchise name.</p>
+              <p className="text-[11px]">Try searching by alternate titles or franchise root name.</p>
             </div>
           ) : (
-            <div className="text-center py-12 text-zenkai-dim text-xs space-y-3 max-w-sm mx-auto">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto text-indigo-400">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <p className="font-medium text-white text-sm">Start typing to quickly add anime</p>
-              <p className="text-[11px] leading-relaxed text-zenkai-muted">
-                Type any anime title above and click <strong>Completed</strong> or <strong>Watching</strong> to instantly add it to your profile.
-              </p>
+            <div className="text-center py-12 text-zenkai-dim text-xs flex items-center justify-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+              <span>Searching Anime Catalog...</span>
             </div>
           )}
         </div>

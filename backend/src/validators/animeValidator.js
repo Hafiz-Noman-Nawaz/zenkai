@@ -19,6 +19,7 @@ const animeQuerySchema = {
       .optional()
       .default('20'),
     q: z.string().trim().optional(),
+    search: z.string().trim().optional(),
     genre: z.string().trim().optional(),
     status: z.string().trim().optional(),
     season: z.enum(['WINTER', 'SPRING', 'SUMMER', 'FALL', 'winter', 'spring', 'summer', 'fall']).optional(),
