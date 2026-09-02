@@ -59,11 +59,15 @@ export const AnimeDetailPage = () => {
   const [trackingNotes, setTrackingNotes] = useState('');
   const [savingTrack, setSavingTrack] = useState(false);
 
-  // Modals
+  // Modals & View Modes
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [isSeiyuuOpen, setIsSeiyuuOpen] = useState(false);
+  const [franchiseView, setFranchiseView] = useState('graph');
+
+  // Ambient Lighting Hook (Must be at top level)
+  const ambientStyle = useAmbientGlow(anime);
 
   // Fetch full details
   const fetchAnimeData = useCallback(async () => {
@@ -268,9 +272,6 @@ export const AnimeDetailPage = () => {
   };
 
   const totalMembers = stats?.totalTracked || 0;
-  const ambientStyle = useAmbientGlow(anime);
-
-  const [franchiseView, setFranchiseView] = useState('graph');
 
   return (
     <div className="relative space-y-10 pb-24">
